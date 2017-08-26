@@ -1,97 +1,105 @@
 org $098000
 
-; r1 = camera x + offset (288 right or 48 left)
-; r2 = camera y - 32
-; r3 = camera y + offset (272 down or 32 up)
-; r4 = camera x - 48
+; spawning sprites routine
+; checks all sprites for being within spawning range
+; of new row & new column both
+; if so, submits new entry into newly spawned table
+; parameters:
+; r1: camera X new column: cam X + offset (288 right or 48 left)
+; r2: camera Y boundary top: cam Y - 32
+; r3: camera Y new row: cam Y + offset (272 down or 32 up)
+; r4: camera X boundary left side: cam X - 48
+gsu_check_new_sprites:
   cache                                     ; $098000 |
-  from r1                                   ; $098001 |
-  asr                                       ; $098002 |\
+  from r1                                   ; $098001 |\
+  asr                                       ; $098002 | |
   asr                                       ; $098003 | |
   asr                                       ; $098004 | |
-  to r1                                     ; $098005 | |
+  to r1                                     ; $098005 | | [spawn_X_new_column]
   asr                                       ; $098006 | |
   from r2                                   ; $098007 | |
   asr                                       ; $098008 | |
   asr                                       ; $098009 | |
   asr                                       ; $09800A | |
-  to r2                                     ; $09800B | |
-  asr                                       ; $09800C | | divide camera positions by 16
-  from r3                                   ; $09800D | |
-  asr                                       ; $09800E | |
+  to r2                                     ; $09800B | | [spawn_Y_top_bound]
+  asr                                       ; $09800C | |
+  from r3                                   ; $09800D | | divide camera positions by 16
+  asr                                       ; $09800E | | giving tile region
   asr                                       ; $09800F | |
   asr                                       ; $098010 | |
-  to r3                                     ; $098011 | |
+  to r3                                     ; $098011 | | [spawn_Y_new_row]
   asr                                       ; $098012 | |
   from r4                                   ; $098013 | |
   asr                                       ; $098014 | |
   asr                                       ; $098015 | |
   asr                                       ; $098016 | |
-  to r4                                     ; $098017 | |
+  to r4                                     ; $098017 | | [spawn_X_left_bound]
   asr                                       ; $098018 |/
-  ibt   r5,#$FFFF                           ; $098019 |
-  iwt   r6,#$01FF                           ; $09801B |
-  ibt   r7,#$0016                           ; $09801E |
-  ibt   r13,#$0014                          ; $098020 |
-  ibt   r8,#$0000                           ; $098022 |
-  iwt   r9,#$28CA                           ; $098024 |
-  iwt   r10,#$27CE                          ; $098027 | #$27CE into r10 (first word is sprite ID)
-  lm    r0,($2602)                          ; $09802A |\ set the value in $702602 as the ROM data bank
-  romb                                      ; $09802E |/
-  lm    r14,($2600)                         ; $098030 | r14 = ROM address
+  ibt   r5,#$FFFF                           ; $098019 | sprite data end marker
+  iwt   r6,#$01FF                           ; $09801B | sprite ID mask
+  ibt   r7,#$0016                           ; $09801E | number of columns for spawn check
+  ibt   r13,#$0014                          ; $098020 | number of rows for spawn check
+  ibt   r8,#$0000                           ; $098022 | stage ID index
+  iwt   r9,#$28CA                           ; $098024 | stage sprites spawning flags table
+  iwt   r10,#$27CE                          ; $098027 | newly spawned sprites table
+  lm    r0,($2602)                          ; $09802A |\
+  romb                                      ; $09802E | | long sprite data ROM pointer for current level
+  lm    r14,($2600)                         ; $098030 |/
 
-; loop begins here
-CODE_098034:
+.spawn_loop
   ldb   (r9)                                ; $098034 |\
-  dec   r0                                  ; $098036 | |
-  bmi CODE_098041                           ; $098037 | |
-  getb                                      ; $098039 | | loop until <= 0
-  with r14                                  ; $09803A | |
-  add   #3                                  ; $09803B | | in 7028CA table
-  inc   r8                                  ; $09803D | |
-  bra CODE_098034                           ; $09803E | |
-  inc   r9                                  ; $098040 |/
+  dec   r0                                  ; $098036 | | loop through all stage sprites
+  bmi .check_sprite_ROM_done                ; $098037 | |
+  getb                                      ; $098039 | | if spawning flag is > 0
+  with r14                                  ; $09803A | | go to next
+  add   #3                                  ; $09803B | |
+  inc   r8                                  ; $09803D | | this checks the flag for $0000
+  bra .spawn_loop                           ; $09803E | | if $00FF, value will be positive
+  inc   r9                                  ; $098040 |/  hence do not spawn and skip
 
-CODE_098041:
-  inc   r14                                 ; $098041 |
-  to r12                                    ; $098042 |
-  getbh                                     ; $098043 |
-  from r12                                  ; $098045 |
-  sub   r5                                  ; $098046 | r12 - r5 -> r0
-  beq CODE_098080                           ; $098047 |
+.check_sprite_ROM_done
+  inc   r14                                 ; $098041 |\
+  to r12                                    ; $098042 | |
+  getbh                                     ; $098043 | | if first word of current level sprite
+  from r12                                  ; $098045 | | == $FFFF
+  sub   r5                                  ; $098046 | | break out of loop
+  beq .ret                                  ; $098047 |/
   inc   r14                                 ; $098049 |
-  from r12                                  ; $09804A |
-  and   r6                                  ; $09804B |\ sprite ID -> $7027CE
-  stw   (r10)                               ; $09804C |/
-  to r11                                    ; $09804D |
-  getb                                      ; $09804E | r11 = passed in table,x
-  inc   r14                                 ; $09804F | inc r14
-  from r12                                  ; $098050 |
-  hib                                       ; $098051 | load high byte of r12 to r0
-  lsr                                       ; $098052 | multiply r0 by 2
-  move  r12,r0                              ; $098053 | move r0 into r12
-  sub   r3                                  ; $098055 | r0 - ((camera y + offset)/16) -> r0
-  bne CODE_098060                           ; $098056 |\
-  from r11                                  ; $098058 |
-  sub   r4                                  ; $098059 |/ r11 - ((camera x - 48)/16) -> r0
-  bmi CODE_09805F                           ; $09805A |\
-  sub   r7                                  ; $09805C |/ r0 - r7 -> r0
-  bmi CODE_09806B                           ; $09805D |\
+  from r12                                  ; $09804A |\  first word of current level sprite
+  and   r6                                  ; $09804B | | & sprite ID mask gives sprite ID
+  stw   (r10)                               ; $09804C |/  sprite ID -> $7027CE,x
+  to r11                                    ; $09804D |\ [stage_sprite_X_tile]
+  getb                                      ; $09804E |/ r11 = third byte of current level sprite
+  inc   r14                                 ; $09804F |\
+  from r12                                  ; $098050 | | [stage_sprite_Y_tile]
+  hib                                       ; $098051 | | r12 = second byte of current level sprite
+  lsr                                       ; $098052 | | >> 1 (to get rid of high ID)
+  move  r12,r0                              ; $098053 |/
+  sub   r3                                  ; $098055 |\ if stage_sprite_Y_tile
+  bne .check_new_column                     ; $098056 |/ != spawn_Y_new_row
+  from r11                                  ; $098058 |\  if sprite is on the new row, check
+  sub   r4                                  ; $098059 | | if sprite column > spawn_X_left_bound
+  bmi .check_new_column_from                ; $09805A | | and sprite column < spawn_X_left_bound + 22
+  sub   r7                                  ; $09805C | | this means sprite is within spawning range
+  bmi .spawn_sprite                         ; $09805D |/  so, spawn! else check new column
 
-CODE_09805F:
+.check_new_column_from
   from r11                                  ; $09805F |
 
-CODE_098060:
-  sub   r1                                  ; $098060 |/ r11 - ((camera x + offset)/16) -> r0
-  bne CODE_09807C                           ; $098061 |\
-  from r12                                  ; $098063 |
-  sub   r2                                  ; $098064 |/ r12 - ((camera y - 32)/16) -> r0
-  bmi CODE_09807C                           ; $098065 |\
-  sub   r13                                 ; $098067 |/ r0 - r13 -> r0
-  bpl CODE_09807C                           ; $098068 |\
-  nop                                       ; $09806A |/
+.check_new_column
+  sub   r1                                  ; $098060 |\ if stage_sprite_X_tile
+  bne .spawn_continue                       ; $098061 |/ != spawn_X_new_column
+  from r12                                  ; $098063 |\
+  sub   r2                                  ; $098064 | | if sprite is on the new column, check
+  bmi .spawn_continue                       ; $098065 | | if sprite row > spawn_Y_top_bound
+  sub   r13                                 ; $098067 | | and sprite row < spawn_Y_top_bound + 20
+  bpl .spawn_continue                       ; $098068 | | this means sprite is within spawning range
+  nop                                       ; $09806A |/  so, spawn! else go to next in loop
 
-CODE_09806B:
+; this doesn't truly "spawn" the sprite
+; but just submits a new entry into newly spawned table
+; SCPU will then read through this table checking for entries
+.spawn_sprite
   inc   r10                                 ; $09806B |\
   inc   r10                                 ; $09806C | | x tile position -> $7027D0,x
   from r11                                  ; $09806D | |
@@ -105,19 +113,18 @@ CODE_09806B:
   from r8                                   ; $098075 | |
   stw   (r10)                               ; $098076 |/
   inc   r10                                 ; $098077 |\
-  inc   r10                                 ; $098078 | | $FF -> $7028CA + stage ID
+  inc   r10                                 ; $098078 | | $00FF -> $7028CA + stage ID
   from r5                                   ; $098079 | | this marks stage ID as "spawned in"
   stb   (r9)                                ; $09807A |/  so, don't spawn again
 
-CODE_09807C:
-  inc   r8                                  ; $09807C |
-  bra CODE_098034                           ; $09807D |\ loop back up
+.spawn_continue
+  inc   r8                                  ; $09807C | increment stage ID
+  bra .spawn_loop                           ; $09807D |\ loop back up
+  inc   r9                                  ; $09807F |/ end spawn_loop
 
-  inc   r9                                  ; $09807F |/
-
-CODE_098080:
-  from r5                                   ; $098080 |
-  stw   (r10)                               ; $098081 | $FFFF -> r10
+.ret
+  from r5                                   ; $098080 |\ store end marker $FFFF
+  stw   (r10)                               ; $098081 |/
   stop                                      ; $098082 |
   nop                                       ; $098083 |
 
@@ -641,389 +648,428 @@ CODE_09835D:
   stop                                      ; $09835D |
   nop                                       ; $09835E |
 
-; copy yoshi to OAM buff
-  ibt   r0,#$004C                           ; $09835F |
-  romb                                      ; $098361 |
+; copy Yoshi to OAM buffer
+; parameters:
+; r1: [cam_rel_player_X]
+; r2: [cam_rel_player_Y]
+; r3: [player_facing]
+; r12: # of OAM entries for this Yoshi frame
+; r14: address of start of OAM ROM block $4Cxxxx
+gsu_draw_player:
+  ibt   r0,#$004C                           ; $09835F |\
+  romb                                      ; $098361 |/ banks 18 & 19
   move  r14,r14                             ; $098363 |
-  lms   r4,($0126)                          ; $098365 |
-  lms   r5,($0118)                          ; $098368 |
-  ibt   r0,#$0060                           ; $09836B |
-  to r5                                     ; $09836D |
-  add   r5                                  ; $09836E |
-  iwt   r9,#$0128                           ; $09836F |
-  ibt   r7,#$0000                           ; $098372 |
+  lms   r4,($0126)                          ; $098365 | --pp---- (OAM priority)
+  lms   r5,($0118)                          ; $098368 | above layer OAM pointer
+  ibt   r0,#$0060                           ; $09836B |\  reserve $60 bytes for tongue
+  to r5                                     ; $09836D | | r5 = $60 + above layer OAM
+  add   r5                                  ; $09836E |/  start of yoshi OAM
+  iwt   r9,#$0128                           ; $09836F | Yoshi graphics DMA queue
+  ibt   r7,#$0000                           ; $098372 | tile #
   cache                                     ; $098374 |
-  move  r13,r15                             ; $098375 |
-  to r6                                     ; $098377 |
-  getb                                      ; $098378 |
-  inc   r14                                 ; $098379 |
-  from r6                                   ; $09837A |
-  lsr                                       ; $09837B |
-  lsr                                       ; $09837C |
-  lsr                                       ; $09837D |
-  lsr                                       ; $09837E |
-  to r11                                    ; $09837F |
-  and   #2                                  ; $098380 |
-  getb                                      ; $098382 |
-  inc   r14                                 ; $098383 |
-  sex                                       ; $098384 |
-  ibt   r8,#$0000                           ; $098385 |
-  dec   r3                                  ; $098387 |
-  bpl CODE_098395                           ; $098388 |
-  inc   r3                                  ; $09838A |
-  not                                       ; $09838B |
-  inc   r0                                  ; $09838C |
-  ibt   r8,#$0040                           ; $09838D |
-  dec   r11                                 ; $09838F |
-  bpl CODE_098395                           ; $098390 |
-  inc   r11                                 ; $098392 |
-  add   #8                                  ; $098393 |
+  move  r13,r15                             ; $098375 | loop through OAM & graphics entries
 
-CODE_098395:
-  add   r1                                  ; $098395 |
-  stw   (r5)                                ; $098396 |
-  inc   r5                                  ; $098397 |
-  inc   r5                                  ; $098398 |
-  getb                                      ; $098399 |
-  inc   r14                                 ; $09839A |
-  sex                                       ; $09839B |
-  add   r2                                  ; $09839C |
-  stw   (r5)                                ; $09839D |
-  inc   r5                                  ; $09839E |
-  inc   r5                                  ; $09839F |
-  iwt   r0,#$00C0                           ; $0983A0 |
-  and   r6                                  ; $0983A3 |
-  xor   r8                                  ; $0983A4 |
-  or    r4                                  ; $0983A6 |
-  lms   r10,($0124)                         ; $0983A7 |
-  or    r10                                 ; $0983AA |
-  swap                                      ; $0983AB |
-  or    r7                                  ; $0983AC |
-  inc   r7                                  ; $0983AD |
-  inc   r7                                  ; $0983AE |
-  stw   (r5)                                ; $0983AF |
-  inc   r5                                  ; $0983B0 |
-  inc   r5                                  ; $0983B1 |
-  from r11                                  ; $0983B2 |
-  stw   (r5)                                ; $0983B3 |
-  inc   r5                                  ; $0983B4 |
-  inc   r5                                  ; $0983B5 |
-  from r6                                   ; $0983B6 |
-  and   #15                                 ; $0983B7 |
-  swap                                      ; $0983B9 |
-  getbl                                     ; $0983BA |
-  inc   r14                                 ; $0983BC |
-  with r11                                  ; $0983BD |
-  and   #2                                  ; $0983BE |
-  beq CODE_0983DA                           ; $0983C0 |
-  nop                                       ; $0983C2 |
-  iwt   r10,#$0090                          ; $0983C3 |
-  cmp   r10                                 ; $0983C6 |
-  bcs CODE_0983DA                           ; $0983C8 |
-  nop                                       ; $0983CA |
-  lms   r10,($0168)                         ; $0983CB |
-  lms   r11,($0162)                         ; $0983CE |
-  with r10                                  ; $0983D1 |
-  or    r11                                 ; $0983D2 |
-  bne CODE_0983DA                           ; $0983D3 |
-  nop                                       ; $0983D5 |
-  iwt   r10,#$0100                          ; $0983D6 |
-  add   r10                                 ; $0983D9 |
+.yoshi_OAM_loop
+  to r6                                     ; $098377 |\  [yoshi_OAM_byte_1]
+  getb                                      ; $098378 | | r6 = first byte of OAM data
+  inc   r14                                 ; $098379 |/
+  from r6                                   ; $09837A |\
+  lsr                                       ; $09837B | | [yoshi_size_bit]
+  lsr                                       ; $09837C | | r11 = 00x00000 bit
+  lsr                                       ; $09837D | | shifted to 000000x0
+  lsr                                       ; $09837E | | for OAM size bit
+  to r11                                    ; $09837F | |
+  and   #2                                  ; $098380 |/
+  getb                                      ; $098382 |\  [yoshi_draw_offset_X]
+  inc   r14                                 ; $098383 | | r0 = second byte of OAM data
+  sex                                       ; $098384 |/  X drawing offset
+  ibt   r8,#$0000                           ; $098385 |\
+  dec   r3                                  ; $098387 | | [yoshi_x_flip_mask]
+  bpl .store_yoshi_OAM                      ; $098388 | | if Yoshi is facing right,
+  inc   r3                                  ; $09838A | | negate yoshi_draw_offset_X
+  not                                       ; $09838B | | and r8 = $40 instead of $00
+  inc   r0                                  ; $09838C | | meaning flip x bit
+  ibt   r8,#$0040                           ; $09838D |/
+  dec   r11                                 ; $09838F |\
+  bpl .store_yoshi_OAM                      ; $098390 | | if yoshi_size_bit is off,
+  inc   r11                                 ; $098392 | | add 8 to yoshi_draw_offset_X
+  add   #8                                  ; $098393 |/
 
-CODE_0983DA:
-  iwt   r10,#$07FF                          ; $0983DA |
-  and   r10                                 ; $0983DD |
-  with r6                                   ; $0983DE |
-  and   #8                                  ; $0983DF |
-  ibt   r6,#$0052                           ; $0983E1 |
-  beq CODE_0983EC                           ; $0983E3 |
-  nop                                       ; $0983E5 |
-  iwt   r6,#$8300                           ; $0983E6 |
-  add   r6                                  ; $0983E9 |
-  ibt   r6,#$0070                           ; $0983EA |
+.store_yoshi_OAM
+  add   r1                                  ; $098395 |\  cam_rel_player_X
+  stw   (r5)                                ; $098396 | | + yoshi_draw_offset_X
+  inc   r5                                  ; $098397 | | -> word 1 in OAM buffer entry
+  inc   r5                                  ; $098398 |/
+  getb                                      ; $098399 |\
+  inc   r14                                 ; $09839A | | cam_rel_player_Y
+  sex                                       ; $09839B | | + third byte of OAM data
+  add   r2                                  ; $09839C | | (Y drawing offset)
+  stw   (r5)                                ; $09839D | | -> word 2 in OAM buffer entry
+  inc   r5                                  ; $09839E | |
+  inc   r5                                  ; $09839F |/
+  iwt   r0,#$00C0                           ; $0983A0 |\
+  and   r6                                  ; $0983A3 | | build up yxppccct tttttttt
+  xor   r8                                  ; $0983A4 | | yx from yoshi_OAM_byte_1
+  or    r4                                  ; $0983A6 | | flip x if facing right
+  lms   r10,($0124)                         ; $0983A7 | | pp from $0126 (priority)
+  or    r10                                 ; $0983AA | | ccc from $0124
+  swap                                      ; $0983AB | | (palette)
+  or    r7                                  ; $0983AC | | swap cause tttttttt comes "first"
+  inc   r7                                  ; $0983AD | | t tttttttt comes simply from
+  inc   r7                                  ; $0983AE | | adding 2 each loop, because
+  stw   (r5)                                ; $0983AF | | tiles get written fresh
+  inc   r5                                  ; $0983B0 | | -> word 3 in OAM buffer entry
+  inc   r5                                  ; $0983B1 |/
+  from r11                                  ; $0983B2 |\
+  stw   (r5)                                ; $0983B3 | | -------s- : size bit
+  inc   r5                                  ; $0983B4 | | -> word 4 in OAM buffer entry
+  inc   r5                                  ; $0983B5 |/
+  from r6                                   ; $0983B6 |\  build yoshi gfx queue entry:
+  and   #15                                 ; $0983B7 | | [yoshi_gfx_source_addr]
+  swap                                      ; $0983B9 | | r0 = low 3 from yoshi_OAM_byte_1
+  getbl                                     ; $0983BA | | and fourth byte of OAM data:
+  inc   r14                                 ; $0983BC |/  00000aaa aaaaaaaa
+  with r11                                  ; $0983BD |\
+  and   #2                                  ; $0983BE | | if size bit on
+  beq .source_bank                          ; $0983C0 | |
+  nop                                       ; $0983C2 |/
+  iwt   r10,#$0090                          ; $0983C3 |\
+  cmp   r10                                 ; $0983C6 | | and yoshi_gfx_source_addr
+  bcs .source_bank                          ; $0983C8 | | < $90 (or $1200 post-shift)
+  nop                                       ; $0983CA |/
+  lms   r10,($0168)                         ; $0983CB |\
+  lms   r11,($0162)                         ; $0983CE | |
+  with r10                                  ; $0983D1 | | and nothing in Yoshi's mouth
+  or    r11                                 ; $0983D2 | | / tonguing
+  bne .source_bank                          ; $0983D3 | |
+  nop                                       ; $0983D5 |/
+  iwt   r10,#$0100                          ; $0983D6 |\ then add $100 ($2000 post-shift) to
+  add   r10                                 ; $0983D9 |/ yoshi_gfx_source_addr for mouth gfx
 
-CODE_0983EC:
-  add   r0                                  ; $0983EC |
-  add   r0                                  ; $0983ED |
-  add   r0                                  ; $0983EE |
-  add   r0                                  ; $0983EF |
-  add   r0                                  ; $0983F0 |
-  stw   (r9)                                ; $0983F1 |
-  inc   r9                                  ; $0983F2 |
-  inc   r9                                  ; $0983F3 |
-  to r10                                    ; $0983F4 |
-  hib                                       ; $0983F5 |
-  from r6                                   ; $0983F6 |
-  stb   (r9)                                ; $0983F7 |
-  inc   r9                                  ; $0983F9 |
-  from r10                                  ; $0983FA |
-  add   #2                                  ; $0983FB |
-  stb   (r9)                                ; $0983FD |
+.source_bank
+  iwt   r10,#$07FF                          ; $0983DA |\ mask off high 5 bits
+  and   r10                                 ; $0983DD |/ of yoshi_gfx_source_addr
+  with r6                                   ; $0983DE |\
+  and   #8                                  ; $0983DF | | if ----b--- source bank selector
+  ibt   r6,#$0052                           ; $0983E1 | | bit of yoshi_OAM_byte_1 is off,
+  beq .store_graphics_queue                 ; $0983E3 | | choose $52 as source bank
+  nop                                       ; $0983E5 | | if on, choose $70 and also
+  iwt   r6,#$8300                           ; $0983E6 | | add $8300 to yoshi_gfx_source_addr
+  add   r6                                  ; $0983E9 | | (or $6000 post-shift) to line up
+  ibt   r6,#$0070                           ; $0983EA |/  with $706000, part of gfx buffer
+
+.store_graphics_queue
+  add   r0                                  ; $0983EC |\
+  add   r0                                  ; $0983ED | | yoshi_gfx_source_addr << 5
+  add   r0                                  ; $0983EE | | which is aaaaaaaaaaa00000
+  add   r0                                  ; $0983EF | | 3 bits from yoshi_OAM_byte_1
+  add   r0                                  ; $0983F0 | | 8 bits from byte 4
+  stw   (r9)                                ; $0983F1 | | then any additions ($2000 or
+  inc   r9                                  ; $0983F2 | | $6000)
+  inc   r9                                  ; $0983F3 |/  -> bytes 1 & 2 of queue entry
+  to r10                                    ; $0983F4 |\ r10 = high byte of source addr
+  hib                                       ; $0983F5 |/
+  from r6                                   ; $0983F6 |\  source bank ($52 or $70)
+  stb   (r9)                                ; $0983F7 | | -> byte 3 of queue entry
+  inc   r9                                  ; $0983F9 |/
+  from r10                                  ; $0983FA |\  bottom row address
+  add   #2                                  ; $0983FB | | high byte of source addr + 2
+  stb   (r9)                                ; $0983FD |/  -> byte 4 of queue entry
   loop                                      ; $0983FF |
-  inc   r9                                  ; $098400 |
-  lms   r0,($00AE)                          ; $098401 | Yoshi form index
-  add   r0                                  ; $098404 | * 2 + 1
-  inc   r0                                  ; $098405 |
-  to r15                                    ; $098406 |
-  add   r15                                 ; $098407 | pointer table
+  inc   r9                                  ; $098400 | end yoshi_OAM_loop
+  lms   r0,($00AE)                          ; $098401 |\
+  add   r0                                  ; $098404 | | index into yoshi_form_draw_ptr
+  inc   r0                                  ; $098405 | | table with yoshi form
+  to r15                                    ; $098406 | | * 2 + 1
+  add   r15                                 ; $098407 |/  since each entry is 4 bytes
 
-yoshi_form_ptr:
-  iwt   r15,#$8431                          ; $098408 | $0000: Yoshi
+; GSU style pointer table
+; each player form's extra drawing routine
+; places/adjusts any extra OAM like legs, wheels, tongue, etc.
+yoshi_form_draw_ptr:
+  iwt   r15,#draw_tongue                    ; $098408 | $0000: Yoshi
   nop                                       ; $09840B |
   nop                                       ; $09840C |
-  dw $861D                                  ; $09840D | $0002: Car Yoshi
+  dw draw_car_wheels                        ; $09840D | $0002: Car Yoshi
   nop                                       ; $09840F |
   nop                                       ; $098410 |
-  dw $872D                                  ; $098411 | $0004: Mole Yoshi
+  dw adjust_mole_arms                       ; $098411 | $0004: Mole Yoshi
   nop                                       ; $098413 |
   nop                                       ; $098414 |
-  dw $8787                                  ; $098415 | $0006: Helicopter Yoshi
+  dw ret_helicopter                         ; $098415 | $0006: Helicopter Yoshi
   nop                                       ; $098417 |
   nop                                       ; $098418 |
-  dw $8789                                  ; $098419 | $0008: Train Yoshi
+  dw adjust_train                           ; $098419 | $0008: Train Yoshi
   nop                                       ; $09841B |
   nop                                       ; $09841C |
-  dw $87E1                                  ; $09841D | $000A: Mushroom Yoshi (Beta)
+  dw ret_mushroom                           ; $09841D | $000A: Mushroom Yoshi (Beta)
   nop                                       ; $09841F |
   nop                                       ; $098420 |
-  dw $87E3                                  ; $098421 | $000C: Sub Yoshi
+  dw ret_submarine                          ; $098421 | $000C: Sub Yoshi
   nop                                       ; $098423 |
   nop                                       ; $098424 |
-  dw $87E5                                  ; $098425 | $000E: Ski Yoshi
+  dw ret_ski_plane                          ; $098425 | $000E: Ski Yoshi
   nop                                       ; $098427 |
   nop                                       ; $098428 |
-  dw $87E7                                  ; $098429 | $0010: Super Baby Mario
+  dw adjust_mario                           ; $098429 | $0010: Super Baby Mario
   nop                                       ; $09842B |
   nop                                       ; $09842C |
-  dw $87E5                                  ; $09842D | $0012: Plane Yoshi (Beta)
+  dw ret_ski_plane                          ; $09842D | $0012: Plane Yoshi (Beta)
   nop                                       ; $09842F |
   nop                                       ; $098430 |
 
+; form $0000: Regular Yoshi, so draw tongue
+draw_tongue:
   iwt   r0,#$0009                           ; $098431 |
   romb                                      ; $098434 |
-  lms   r0,($015E)                          ; $098436 |
-  iwt   r14,#$853D                          ; $098439 |
-  to r14                                    ; $09843C |
-  add   r14                                 ; $09843D |
-  to r10                                    ; $09843E |
-  getb                                      ; $09843F |
-  lms   r5,($0118)                          ; $098440 |
-  with r4                                   ; $098443 |
-  swap                                      ; $098444 |
-  lms   r11,($0150)                         ; $098445 |
-  dec   r11                                 ; $098448 |
-  bmi CODE_098473                           ; $098449 |
-  nop                                       ; $09844B |
-  from r11                                  ; $09844C |
-  sub   #7                                  ; $09844D |
-  bcs CODE_098473                           ; $09844F |
-  nop                                       ; $098451 |
-  lms   r0,($0154)                          ; $098452 |
-  sub   #0                                  ; $098455 |
-  bpl CODE_09845C                           ; $098457 |
-  nop                                       ; $098459 |
-  not                                       ; $09845A |
-  inc   r0                                  ; $09845B |
+  lms   r0,($015E)                          ; $098436 |\
+  iwt   r14,#tongue_anim_indices            ; $098439 | | [tongue_anim_index]
+  to r14                                    ; $09843C | | tongue animation frame
+  add   r14                                 ; $09843D | | index into ROM table
+  to r10                                    ; $09843E | | r10 = grab index
+  getb                                      ; $09843F |/
+  lms   r5,($0118)                          ; $098440 | r5 = reserved tongue OAM ptr
+  with r4                                   ; $098443 |\ [yoshi_OAM_priority]
+  swap                                      ; $098444 |/ --pp---- --------
+  lms   r11,($0150)                         ; $098445 |\
+  dec   r11                                 ; $098448 | | r11 = [mouth_state]
+  bmi .ret_no_tongue                        ; $098449 | | if mouth_state
+  nop                                       ; $09844B | | == $00 (doing nothing)
+  from r11                                  ; $09844C | | or >= $06 (swallowing states)
+  sub   #7                                  ; $09844D | | return immediately
+  bcs .ret_no_tongue                        ; $09844F | |
+  nop                                       ; $098451 |/
+  lms   r0,($0154)                          ; $098452 |\
+  sub   #0                                  ; $098455 | |
+  bpl .tongue_length                        ; $098457 | | r0 = absolute value of
+  nop                                       ; $098459 | | tongue Y height
+  not                                       ; $09845A | |
+  inc   r0                                  ; $09845B |/
 
-CODE_09845C:
-  lsr                                       ; $09845C |
-  lsr                                       ; $09845D |
-  to r7                                     ; $09845E |
-  lsr                                       ; $09845F |
-  lms   r0,($0152)                          ; $098460 |
-  sub   #0                                  ; $098463 |
-  bpl CODE_09846A                           ; $098465 |
-  nop                                       ; $098467 |
-  not                                       ; $098468 |
-  inc   r0                                  ; $098469 |
+.tongue_length
+  lsr                                       ; $09845C |\
+  lsr                                       ; $09845D | | r7 = abs(tongue height)
+  to r7                                     ; $09845E | | >> 3 (at least a tile)
+  lsr                                       ; $09845F |/
+  lms   r0,($0152)                          ; $098460 |\
+  sub   #0                                  ; $098463 | |
+  bpl .check_tongue_out                     ; $098465 | | r0 = absolute value of
+  nop                                       ; $098467 | | tongue X length
+  not                                       ; $098468 | |
+  inc   r0                                  ; $098469 |/
 
-CODE_09846A:
-  lsr                                       ; $09846A |
-  lsr                                       ; $09846B |
-  to r6                                     ; $09846C |
-  lsr                                       ; $09846D |
-  from r6                                   ; $09846E |
-  or    r7                                  ; $09846F |
-  bne CODE_098475                           ; $098470 |
-  nop                                       ; $098472 |
+.check_tongue_out
+  lsr                                       ; $09846A |\
+  lsr                                       ; $09846B | | r6 = abs(tongue length)
+  to r6                                     ; $09846C | | >> 3 (at least a tile)
+  lsr                                       ; $09846D |/
+  from r6                                   ; $09846E |\  is tongue out in either axis
+  or    r7                                  ; $09846F | | by at least a tile?
+  bne .check_horizontal                     ; $098470 | | if not, return
+  nop                                       ; $098472 |/
 
-CODE_098473:
+.ret_no_tongue
   stop                                      ; $098473 |
   nop                                       ; $098474 |
 
-CODE_098475:
-  lms   r1,($0156)                          ; $098475 |
-  lms   r2,($0158)                          ; $098478 |
-  from r11                                  ; $09847B |
-  lsr                                       ; $09847C |
-  beq CODE_098484                           ; $09847D |
-  nop                                       ; $09847F |
-  iwt   r15,#$84DE                          ; $098480 |
-  nop                                       ; $098483 |
+.check_horizontal
+  lms   r1,($0156)                          ; $098475 | [cam_rel_tongue_X]
+  lms   r2,($0158)                          ; $098478 | [cam_rel_tongue_Y]
+  from r11                                  ; $09847B |\  if (mouth_state - 1) / 2
+  lsr                                       ; $09847C | | == 0, so == 01 or 02
+  beq .horizontal                           ; $09847D | | this means horizontally
+  nop                                       ; $09847F |/  growing or retracting
+  iwt   r15,#.vertical_tongue               ; $098480 |\ else skip down
+  nop                                       ; $098483 |/ to vertical processing
 
-CODE_098484:
-  ibt   r9,#$0008                           ; $098484 |
-  ibt   r8,#$0000                           ; $098486 |
-  ibt   r7,#$0000                           ; $098488 |
-  dec   r3                                  ; $09848A |
-  bpl CODE_098495                           ; $09848B |
-  inc   r3                                  ; $09848D |
-  ibt   r7,#$0008                           ; $09848E |
-  ibt   r9,#$FFF8                           ; $098490 |
-  iwt   r8,#$4000                           ; $098492 |
+.horizontal
+  ibt   r9,#$0008                           ; $098484 |\
+  ibt   r8,#$0000                           ; $098486 | | if player_facing
+  ibt   r7,#$0000                           ; $098488 | | left, these values
+  dec   r3                                  ; $09848A | | (r9 = loop direction,
+  bpl .draw_horizontal                      ; $09848B | | r8 = X flip,
+  inc   r3                                  ; $09848D | | r7 = draw X facing adjust)
+  ibt   r7,#$0008                           ; $09848E | | player_facing right,
+  ibt   r9,#$FFF8                           ; $098490 | | these instead
+  iwt   r8,#$4000                           ; $098492 |/
 
-CODE_098495:
-  from r1                                   ; $098495 |
-  add   r7                                  ; $098496 |
-  stw   (r5)                                ; $098497 |
-  inc   r5                                  ; $098498 |
-  inc   r5                                  ; $098499 |
-  from r2                                   ; $09849A |
-  stw   (r5)                                ; $09849B |
-  inc   r5                                  ; $09849C |
-  inc   r5                                  ; $09849D |
-  iwt   r0,#$0A20                           ; $09849E |
-  or    r4                                  ; $0984A1 |
-  or    r8                                  ; $0984A2 |
-  stw   (r5)                                ; $0984A3 |
-  inc   r5                                  ; $0984A4 |
-  inc   r5                                  ; $0984A5 |
-  sub   r0                                  ; $0984A6 |
-  stw   (r5)                                ; $0984A7 |
-  inc   r5                                  ; $0984A8 |
-  inc   r5                                  ; $0984A9 |
-  cache                                     ; $0984AA |
-  iwt   r0,#$854D                           ; $0984AB |
-  to r14                                    ; $0984AE |
-  add   r10                                 ; $0984AF |
-  getb                                      ; $0984B0 |
-  inc   r14                                 ; $0984B1 |
-  getbh                                     ; $0984B2 |
-  move  r14,r0                              ; $0984B4 |
-  dec   r6                                  ; $0984B6 |
-  beq CODE_0984DC                           ; $0984B7 |
-  nop                                       ; $0984B9 |
-  move  r12,r6                              ; $0984BA |
-  move  r13,r15                             ; $0984BC |
-  with r1                                   ; $0984BE |
-  add   r9                                  ; $0984BF |
-  from r1                                   ; $0984C0 |
-  add   r7                                  ; $0984C1 |
-  stw   (r5)                                ; $0984C2 |
-  inc   r5                                  ; $0984C3 |
-  inc   r5                                  ; $0984C4 |
-  getbs                                     ; $0984C5 |
-  inc   r14                                 ; $0984C7 |
-  add   r2                                  ; $0984C8 |
-  stw   (r5)                                ; $0984C9 |
-  inc   r5                                  ; $0984CA |
-  inc   r5                                  ; $0984CB |
-  getb                                      ; $0984CC |
-  inc   r14                                 ; $0984CD |
-  getbh                                     ; $0984CE |
-  inc   r14                                 ; $0984D0 |
-  or    r4                                  ; $0984D1 |
-  xor   r8                                  ; $0984D2 |
-  stw   (r5)                                ; $0984D4 |
-  inc   r5                                  ; $0984D5 |
-  inc   r5                                  ; $0984D6 |
-  sub   r0                                  ; $0984D7 |
-  stw   (r5)                                ; $0984D8 |
-  inc   r5                                  ; $0984D9 |
-  loop                                      ; $0984DA |
-  inc   r5                                  ; $0984DB |
+; in OAM buffer, after Yoshi himself
+; begin tongue drawing continuing r5
+; for horizontal
+; start with tongue end piece,
+; then loop after for rest of tongue
+.draw_horizontal
+  from r1                                   ; $098495 |\
+  add   r7                                  ; $098496 | | adjust cam_rel_tongue_X for
+  stw   (r5)                                ; $098497 | | facing (+0 left, +8 right)
+  inc   r5                                  ; $098498 | | -> word 1 in OAM buffer entry
+  inc   r5                                  ; $098499 |/
+  from r2                                   ; $09849A |\
+  stw   (r5)                                ; $09849B | | cam_rel_tongue_Y
+  inc   r5                                  ; $09849C | | -> word 2 in OAM buffer entry
+  inc   r5                                  ; $09849D |/
+  iwt   r0,#$0A20                           ; $09849E |\  ----101- palette
+  or    r4                                  ; $0984A1 | | 000100000 tile #: hardcoded
+  or    r8                                  ; $0984A2 | | for horiz tongue end piece
+  stw   (r5)                                ; $0984A3 | | --pp---- priority from $0126
+  inc   r5                                  ; $0984A4 | | and x flip from facing
+  inc   r5                                  ; $0984A5 |/  -> word 3 in OAM buffer entry
+  sub   r0                                  ; $0984A6 |\
+  stw   (r5)                                ; $0984A7 | | $00 (size and priority 0)
+  inc   r5                                  ; $0984A8 | | -> word 4 in OAM buffer entry
+  inc   r5                                  ; $0984A9 |/
+  cache                                     ; $0984AA | prepare tongue loop
+  iwt   r0,#tongue_OAM_ptrs_horiz           ; $0984AB |\
+  to r14                                    ; $0984AE | | [tongue_OAM_ptr_horiz]
+  add   r10                                 ; $0984AF | | r14 = grab tongue OAM pointer
+  getb                                      ; $0984B0 | | for current tongue index
+  inc   r14                                 ; $0984B1 | | this is starting point
+  getbh                                     ; $0984B2 | | of OAM data in ROM
+  move  r14,r0                              ; $0984B4 |/
+  dec   r6                                  ; $0984B6 |\  if tongue length is only 1,
+  beq .ret_horizontal                       ; $0984B7 | | get out (end piece enough)
+  nop                                       ; $0984B9 |/
+  move  r12,r6                              ; $0984BA | loop size: # of non-end pieces
+  move  r13,r15                             ; $0984BC | loop through them
 
-CODE_0984DC:
+.horizontal_loop
+  with r1                                   ; $0984BE |\ X: add or subtract 8 each
+  add   r9                                  ; $0984BF |/ loop based on facing
+  from r1                                   ; $0984C0 |\
+  add   r7                                  ; $0984C1 | | adjust cam_rel_tongue_X for
+  stw   (r5)                                ; $0984C2 | | facing (+0 left, +8 right)
+  inc   r5                                  ; $0984C3 | | -> word 1 in OAM buffer entry
+  inc   r5                                  ; $0984C4 |/
+  getbs                                     ; $0984C5 |\
+  inc   r14                                 ; $0984C7 | | cam_rel_tongue_Y +
+  add   r2                                  ; $0984C8 | | Y draw offset pulled from
+  stw   (r5)                                ; $0984C9 | | current tongue_OAM_ptr_horiz
+  inc   r5                                  ; $0984CA | | -> word 2 in OAM buffer entry
+  inc   r5                                  ; $0984CB |/
+  getb                                      ; $0984CC |\
+  inc   r14                                 ; $0984CD | | bytes 3 & 4 from
+  getbh                                     ; $0984CE | | current tongue_OAM_ptr_horiz:
+  inc   r14                                 ; $0984D0 | | y---ccct tttttttt
+  or    r4                                  ; $0984D1 | | (palette & tile)
+  xor   r8                                  ; $0984D2 | | --pp---- priority from $0126
+  stw   (r5)                                ; $0984D4 | | x flip from facing
+  inc   r5                                  ; $0984D5 | | -> word 3 in OAM buffer entry
+  inc   r5                                  ; $0984D6 |/
+  sub   r0                                  ; $0984D7 |\  $0000: size & prio bits off
+  stw   (r5)                                ; $0984D8 | | -> word 4 in OAM buffer entry
+  inc   r5                                  ; $0984D9 |/
+  loop                                      ; $0984DA | next tongue OAM buffer entry
+  inc   r5                                  ; $0984DB | end horizontal_loop
+
+.ret_horizontal
   stop                                      ; $0984DC |
   nop                                       ; $0984DD |
 
+.vertical_tongue
   move  r6,r7                               ; $0984DE |
-  ibt   r8,#$0000                           ; $0984E0 |
-  ibt   r7,#$0008                           ; $0984E2 |
-  dec   r3                                  ; $0984E4 |
-  bpl CODE_0984ED                           ; $0984E5 |
-  inc   r3                                  ; $0984E7 |
-  ibt   r7,#$0000                           ; $0984E8 |
-  iwt   r8,#$4000                           ; $0984EA |
+  ibt   r8,#$0000                           ; $0984E0 |\
+  ibt   r7,#$0008                           ; $0984E2 | | if player_facing left,
+  dec   r3                                  ; $0984E4 | | use these values
+  bpl .draw_vertical                        ; $0984E5 | | (r8 = X flip,
+  inc   r3                                  ; $0984E7 | | r7 = draw X facing adjust)
+  ibt   r7,#$0000                           ; $0984E8 | | right, these instead
+  iwt   r8,#$4000                           ; $0984EA |/
 
-CODE_0984ED:
-  from r1                                   ; $0984ED |
-  add   r7                                  ; $0984EE |
-  stw   (r5)                                ; $0984EF |
-  inc   r5                                  ; $0984F0 |
-  inc   r5                                  ; $0984F1 |
-  from r2                                   ; $0984F2 |
-  stw   (r5)                                ; $0984F3 |
-  inc   r5                                  ; $0984F4 |
-  inc   r5                                  ; $0984F5 |
-  iwt   r0,#$0A22                           ; $0984F6 |
-  or    r4                                  ; $0984F9 |
-  or    r8                                  ; $0984FA |
-  stw   (r5)                                ; $0984FB |
-  inc   r5                                  ; $0984FC |
-  inc   r5                                  ; $0984FD |
-  sub   r0                                  ; $0984FE |
-  stw   (r5)                                ; $0984FF |
-  inc   r5                                  ; $098500 |
-  inc   r5                                  ; $098501 |
-  cache                                     ; $098502 |
-  iwt   r0,#$85B5                           ; $098503 |
-  to r14                                    ; $098506 |
-  add   r10                                 ; $098507 |
-  getb                                      ; $098508 |
-  inc   r14                                 ; $098509 |
-  getbh                                     ; $09850A |
-  move  r14,r0                              ; $09850C |
-  dec   r6                                  ; $09850E |
-  beq CODE_09853B                           ; $09850F |
-  nop                                       ; $098511 |
-  move  r12,r6                              ; $098512 |
-  move  r13,r15                             ; $098514 |
-  with r2                                   ; $098516 |
-  add   #8                                  ; $098517 |
-  getbs                                     ; $098519 |
-  inc   r14                                 ; $09851B |
-  dec   r3                                  ; $09851C |
-  bpl CODE_098522                           ; $09851D |
-  inc   r3                                  ; $09851F |
-  not                                       ; $098520 |
-  inc   r0                                  ; $098521 |
+; once again, start with end piece for vertical
+; then loop for vertical
+.draw_vertical
+  from r1                                   ; $0984ED |\
+  add   r7                                  ; $0984EE | | adjust cam_rel_tongue_X for
+  stw   (r5)                                ; $0984EF | | facing (+0 left, +8 right)
+  inc   r5                                  ; $0984F0 | | -> word 1 in OAM buffer entry
+  inc   r5                                  ; $0984F1 |/
+  from r2                                   ; $0984F2 |\
+  stw   (r5)                                ; $0984F3 | | cam_rel_tongue_Y
+  inc   r5                                  ; $0984F4 | | -> word 2 in OAM buffer entry
+  inc   r5                                  ; $0984F5 |/
+  iwt   r0,#$0A22                           ; $0984F6 |\  ----101- palette
+  or    r4                                  ; $0984F9 | | 000100010 tile #: hardcoded
+  or    r8                                  ; $0984FA | | for vertical tongue end piece
+  stw   (r5)                                ; $0984FB | | --pp---- priority from $0126
+  inc   r5                                  ; $0984FC | | and x flip from facing
+  inc   r5                                  ; $0984FD |/  -> word 3 in OAM buffer entry
+  sub   r0                                  ; $0984FE |\
+  stw   (r5)                                ; $0984FF | | $00 (size and priority 0)
+  inc   r5                                  ; $098500 | | -> word 4 in OAM buffer entry
+  inc   r5                                  ; $098501 |/
+  cache                                     ; $098502 | prepare tongue loop
+  iwt   r0,#tongue_OAM_ptrs_vert            ; $098503 |\
+  to r14                                    ; $098506 | | [tongue_OAM_ptr_vert]
+  add   r10                                 ; $098507 | | r14 = grab tongue OAM pointer
+  getb                                      ; $098508 | | for current tongue index
+  inc   r14                                 ; $098509 | | this is starting point
+  getbh                                     ; $09850A | | of OAM data in ROM
+  move  r14,r0                              ; $09850C |/
+  dec   r6                                  ; $09850E |\  if tongue length is only 1,
+  beq .ret_vertical                         ; $09850F | | get out (end piece enough)
+  nop                                       ; $098511 |/
+  move  r12,r6                              ; $098512 | loop size: # of non-end pieces
+  move  r13,r15                             ; $098514 | loop through them
 
-CODE_098522:
-  add   r1                                  ; $098522 |
-  add   r7                                  ; $098523 |
-  stw   (r5)                                ; $098524 |
-  inc   r5                                  ; $098525 |
-  inc   r5                                  ; $098526 |
-  from r2                                   ; $098527 |
-  stw   (r5)                                ; $098528 |
-  inc   r5                                  ; $098529 |
-  inc   r5                                  ; $09852A |
-  getb                                      ; $09852B |
-  inc   r14                                 ; $09852C |
-  getbh                                     ; $09852D |
-  inc   r14                                 ; $09852F |
-  or    r4                                  ; $098530 |
-  xor   r8                                  ; $098531 |
-  stw   (r5)                                ; $098533 |
-  inc   r5                                  ; $098534 |
-  inc   r5                                  ; $098535 |
-  sub   r0                                  ; $098536 |
-  stw   (r5)                                ; $098537 |
-  inc   r5                                  ; $098538 |
-  loop                                      ; $098539 |
-  inc   r5                                  ; $09853A |
+.vertical_loop
+  with r2                                   ; $098516 |\ each loop, always go top
+  add   #8                                  ; $098517 |/ to bottom so 8 down
+  getbs                                     ; $098519 |\
+  inc   r14                                 ; $09851B | | read drawing X offset
+  dec   r3                                  ; $09851C | | from current entry in
+  bpl .store_vertical                       ; $09851D | | tongue_OAM_data_vert
+  inc   r3                                  ; $09851F | | if player_facing left,
+  not                                       ; $098520 | | negate the X offset
+  inc   r0                                  ; $098521 |/
 
-CODE_09853B:
+.store_vertical
+  add   r1                                  ; $098522 |\  cam_rel_tongue_X +
+  add   r7                                  ; $098523 | | drawing offset X just read +
+  stw   (r5)                                ; $098524 | | facing adjust (+0 left, +8 right)
+  inc   r5                                  ; $098525 | | -> word 1 in OAM buffer entry
+  inc   r5                                  ; $098526 |/
+  from r2                                   ; $098527 |\
+  stw   (r5)                                ; $098528 | | cam_rel_tongue_Y
+  inc   r5                                  ; $098529 | | -> word 2 in OAM buffer entry
+  inc   r5                                  ; $09852A |/
+  getb                                      ; $09852B |\
+  inc   r14                                 ; $09852C | | bytes 3 & 4 from
+  getbh                                     ; $09852D | | current tongue_OAM_ptr_vert:
+  inc   r14                                 ; $09852F | | -x---ccct tttttttt
+  or    r4                                  ; $098530 | | (palette & tile)
+  xor   r8                                  ; $098531 | | --pp---- priority from $0126
+  stw   (r5)                                ; $098533 | | x flip from facing
+  inc   r5                                  ; $098534 | | -> word 3 in OAM buffer entry
+  inc   r5                                  ; $098535 |/
+  sub   r0                                  ; $098536 |\  $0000: size & prio bits off
+  stw   (r5)                                ; $098537 | | -> word 4 in OAM buffer entry
+  inc   r5                                  ; $098538 |/
+  loop                                      ; $098539 | next tongue OAM buffer entry
+  inc   r5                                  ; $09853A | end vertical_loop
+
+.ret_vertical
   stop                                      ; $09853B |
   nop                                       ; $09853C |
 
+; indexes into either tongue_OAM_ptrs_horiz
+; or tongue_OAM_ptrs_vert (if horizontal or vertical)
+; using the current tongue animation frame
+tongue_anim_indices:
   db $00, $02, $02, $02, $04, $04, $04, $06 ; $09853D |
   db $06, $06, $04, $04, $04, $02, $02, $02 ; $098545 |
 
+; pointers within tongue_OAM_data_horiz
+; to serve as starting point of tongue OAM
+; using the tongue animation index above
+tongue_OAM_ptrs_horiz:
   dw $8555, $856D, $8585, $859D             ; $09854D |
 
-; tongue OAM data
+; holds OAM information about each tongue
+; OAM entry for horizontal, 3 bytes per entry:
+; byte 1: drawing Y offset, signed
+; bytes 2 & 3: corresponds to OAM buffer word 3:
+; tttttttt y---ccct (y flip, palette, tile)
+tongue_OAM_data_horiz:
   db $00, $21, $0A                          ; $098555 |
   db $00, $21, $0A                          ; $098558 |
   db $00, $21, $0A                          ; $09855B |
@@ -1057,9 +1103,18 @@ CODE_09853B:
   db $00, $31, $8A                          ; $0985AF |
   db $01, $31, $0A                          ; $0985B2 |
 
+; pointers within tongue_OAM_data_vert
+; to serve as starting point of tongue OAM
+; using the tongue animation index above
+tongue_OAM_ptrs_vert:
   dw $85BD, $85D5, $85ED, $8605             ; $0985B5 |
 
-; tongue OAM data
+; holds OAM information about each tongue
+; OAM entry for vertical, 3 bytes per entry:
+; byte 1: drawing X offset, signed
+; bytes 2 & 3: corresponds to OAM buffer word 3:
+; tttttttt -x--ccct (x flip, palette, tile)
+tongue_OAM_data_vert:
   db $00, $32, $0A                          ; $0985BD |
   db $00, $32, $0A                          ; $0985C0 |
   db $00, $32, $0A                          ; $0985C3 |
@@ -1093,1268 +1148,1349 @@ CODE_09853B:
   db $00, $33, $4A                          ; $098617 |
   db $FF, $33, $0A                          ; $09861A |
 
-  lms   r0,($0112)                           ; $09861D |
-  lob                                        ; $098620 |
-  bne CODE_098626                            ; $098621 |
-  nop                                        ; $098623 |
-  stop                                       ; $098624 |
-  nop                                        ; $098625 |
+; draw Car Yoshi's wheels if they exist
+draw_car_wheels:
+  lms   r0,($0112)                          ; $09861D |\
+  lob                                       ; $098620 | | is wheel height
+  bne .wheel_OAM                            ; $098621 | | nonzero?
+  nop                                       ; $098623 | |
+  stop                                      ; $098624 | | return if zero
+  nop                                       ; $098625 |/
 
-CODE_098626:
-  lms   r6,($0118)                           ; $098626 |
-  ibt   r0,#$0060                            ; $098629 |
-  to r5                                      ; $09862B |
-  add   r6                                   ; $09862C |
-  ibt   r0,#$0010                            ; $09862D |
-  with r6                                    ; $09862F |
-  add   r0                                   ; $098630 |
-  iwt   r2,#$8000                            ; $098631 |
-  ibt   r12,#$0004                           ; $098634 |
-  cache                                      ; $098636 |
-  move  r13,r15                              ; $098637 |
-  ldw   (r5)                                 ; $098639 |
-  from r2                                    ; $09863A |
-  sbk                                        ; $09863B |
-  stw   (r6)                                 ; $09863C |
-  inc   r5                                   ; $09863D |
-  inc   r5                                   ; $09863E |
-  inc   r6                                   ; $09863F |
-  inc   r6                                   ; $098640 |
-  ldw   (r5)                                 ; $098641 |
-  stw   (r6)                                 ; $098642 |
-  inc   r5                                   ; $098643 |
-  inc   r5                                   ; $098644 |
-  inc   r6                                   ; $098645 |
-  inc   r6                                   ; $098646 |
-  ldw   (r5)                                 ; $098647 |
-  stw   (r6)                                 ; $098648 |
-  inc   r5                                   ; $098649 |
-  inc   r5                                   ; $09864A |
-  inc   r6                                   ; $09864B |
-  inc   r6                                   ; $09864C |
-  ldw   (r5)                                 ; $09864D |
-  stw   (r6)                                 ; $09864E |
-  inc   r5                                   ; $09864F |
-  inc   r5                                   ; $098650 |
-  inc   r6                                   ; $098651 |
-  loop                                       ; $098652 |
-  inc   r6                                   ; $098653 |
-  from r2                                    ; $098654 |
-  stw   (r5)                                 ; $098655 |
-  with r5                                    ; $098656 |
-  add   #4                                   ; $098657 |
-  ldw   (r5)                                 ; $098659 |
-  with r5                                    ; $09865A |
-  add   #4                                   ; $09865B |
-  from r2                                    ; $09865D |
-  stw   (r5)                                 ; $09865E |
-  iwt   r9,#$01FF                            ; $09865F |
-  bic   r9                                   ; $098662 |
-  ibt   r9,#$0008                            ; $098664 |
-  to r9                                      ; $098666 |
-  or    r9                                   ; $098667 |
-  lms   r0,($00C4)                           ; $098668 |
-  add   r0                                   ; $09866B |
-  add   r0                                   ; $09866C |
-  to r14                                     ; $09866D |
-  sub   #4                                   ; $09866E |
-  iwt   r1,#$017E                            ; $098670 |
-  iwt   r2,#$0184                            ; $098673 |
-  lms   r3,($0094)                           ; $098676 |
-  lms   r4,($009C)                           ; $098679 |
-  ibt   r5,#$0010                            ; $09867C |
-  lms   r0,($0112)                           ; $09867E |
-  sub   r5                                   ; $098681 |
-  lms   r5,($0090)                           ; $098682 |
-  add   r5                                   ; $098685 |
-  lms   r5,($0198)                           ; $098686 |
-  sub   r5                                   ; $098689 |
-  to r4                                      ; $09868A |
-  sub   r4                                   ; $09868B |
-  lms   r5,($0118)                           ; $09868C |
-  ibt   r0,#$0030                            ; $09868F |
-  to r6                                      ; $098691 |
-  add   r5                                   ; $098692 |
-  iwt   r10,#$4002                           ; $098693 |
-  ibt   r12,#$0002                           ; $098696 |
-  cache                                      ; $098698 |
-  move  r13,r15                              ; $098699 |
-  ldw   (r1)                                 ; $09869B |
-  sub   #8                                   ; $09869C |
-  sub   r3                                   ; $09869E |
-  stw   (r5)                                 ; $09869F |
-  sub   r14                                  ; $0986A0 |
-  stw   (r6)                                 ; $0986A1 |
-  inc   r5                                   ; $0986A2 |
-  inc   r5                                   ; $0986A3 |
-  inc   r6                                   ; $0986A4 |
-  inc   r6                                   ; $0986A5 |
-  ldw   (r2)                                 ; $0986A6 |
-  add   r4                                   ; $0986A7 |
-  stw   (r5)                                 ; $0986A8 |
-  stw   (r6)                                 ; $0986A9 |
-  inc   r5                                   ; $0986AA |
-  inc   r5                                   ; $0986AB |
-  inc   r6                                   ; $0986AC |
-  inc   r6                                   ; $0986AD |
-  from r9                                    ; $0986AE |
-  stw   (r5)                                 ; $0986AF |
-  from r9                                    ; $0986B0 |
-  stw   (r6)                                 ; $0986B1 |
-  inc   r5                                   ; $0986B2 |
-  inc   r5                                   ; $0986B3 |
-  inc   r6                                   ; $0986B4 |
-  inc   r6                                   ; $0986B5 |
-  from r10                                   ; $0986B6 |
-  lob                                        ; $0986B7 |
-  stw   (r5)                                 ; $0986B8 |
-  from r10                                   ; $0986B9 |
-  stw   (r6)                                 ; $0986BA |
-  inc   r5                                   ; $0986BB |
-  inc   r5                                   ; $0986BC |
-  inc   r6                                   ; $0986BD |
-  with r1                                    ; $0986BE |
-  add   #4                                   ; $0986BF |
-  with r2                                    ; $0986C1 |
-  add   #4                                   ; $0986C2 |
-  loop                                       ; $0986C4 |
-  inc   r6                                   ; $0986C5 |
-  lms   r11,($0112)                          ; $0986C6 |
-  with r11                                   ; $0986C9 |
-  sub   #8                                   ; $0986CA |
-  bpl CODE_0986D1                            ; $0986CC |
-  nop                                        ; $0986CE |
-  stop                                       ; $0986CF |
-  nop                                        ; $0986D0 |
+.wheel_OAM
+  lms   r6,($0118)                          ; $098626 |\  [source_car_body]
+  ibt   r0,#$0060                           ; $098629 | | r5 = OAM pointer for
+  to r5                                     ; $09862B | | player body (car)
+  add   r6                                  ; $09862C |/
+  ibt   r0,#$0010                           ; $09862D |\  [dest_car_body]
+  with r6                                   ; $09862F | | move car body to here
+  add   r0                                  ; $098630 |/
+  iwt   r2,#$8000                           ; $098631 | clear Y coordinate == free OAM
+  ibt   r12,#$0004                          ; $098634 |\  loop 4 times, shift car
+  cache                                     ; $098636 | | body down $50 bytes
+  move  r13,r15                             ; $098637 |/  or 10 entries
 
-CODE_0986D1:
-  ibt   r7,#$001F                            ; $0986D1 |
-  from r9                                    ; $0986D3 |
-  bic   r7                                   ; $0986D4 |
-  to r9                                      ; $0986D6 |
-  or    #10                                  ; $0986D7 |
-  with r10                                   ; $0986D9 |
-  bic   #2                                   ; $0986DA |
-  lms   r0,($00C4)                           ; $0986DC |
-  dec   r0                                   ; $0986DF |
-  with r3                                    ; $0986E0 |
-  add   r0                                   ; $0986E1 |
-  move  r5,r6                                ; $0986E2 |
-  ibt   r0,#$0030                            ; $0986E4 |
-  with r6                                    ; $0986E6 |
-  add   r0                                   ; $0986E7 |
-  with r4                                    ; $0986E8 |
-  add   #4                                   ; $0986E9 |
-  with r4                                    ; $0986EB |
+.car_copy_loop
+  ldw   (r5)                                ; $098639 |\
+  from r2                                   ; $09863A | | copy source to dest
+  sbk                                       ; $09863B | | & clear source Y coord
+  stw   (r6)                                ; $09863C |/  (frees OAM entry)
+  inc   r5                                  ; $09863D |\
+  inc   r5                                  ; $09863E | |
+  inc   r6                                  ; $09863F | |
+  inc   r6                                  ; $098640 | |
+  ldw   (r5)                                ; $098641 | |
+  stw   (r6)                                ; $098642 | |
+  inc   r5                                  ; $098643 | |
+  inc   r5                                  ; $098644 | |
+  inc   r6                                  ; $098645 | |
+  inc   r6                                  ; $098646 | |
+  ldw   (r5)                                ; $098647 | |
+  stw   (r6)                                ; $098648 | | copy one OAM entry
+  inc   r5                                  ; $098649 | | from source to dest
+  inc   r5                                  ; $09864A | | to push car down
+  inc   r6                                  ; $09864B | | 10 entries
+  inc   r6                                  ; $09864C | |
+  ldw   (r5)                                ; $09864D | |
+  stw   (r6)                                ; $09864E | |
+  inc   r5                                  ; $09864F | |
+  inc   r5                                  ; $098650 | |
+  inc   r6                                  ; $098651 | |
+  loop                                      ; $098652 | |
+  inc   r6                                  ; $098653 |/  end car_copy_loop
+  from r2                                   ; $098654 |\ free body + 1 OAM entry
+  stw   (r5)                                ; $098655 |/
+  with r5                                   ; $098656 |\  [car_OAM_3_4]
+  add   #4                                  ; $098657 | | r0 = word 3 of OAM entry
+  ldw   (r5)                                ; $098659 |/  (bytes 3 & 4 of low table)
+  with r5                                   ; $09865A |\
+  add   #4                                  ; $09865B | | free body + 2
+  from r2                                   ; $09865D | | OAM entry
+  stw   (r5)                                ; $09865E |/
+  iwt   r9,#$01FF                           ; $09865F |\  [wheel_OAM_3_4]
+  bic   r9                                  ; $098662 | | same as car except tile #
+  ibt   r9,#$0008                           ; $098664 | | set tile to $08
+  to r9                                     ; $098666 | | -> r9
+  or    r9                                  ; $098667 |/
+  lms   r0,($00C4)                          ; $098668 |\
+  add   r0                                  ; $09866B | | [player_facing_calc]
+  add   r0                                  ; $09866C | | r14 = player facing * 4
+  to r14                                    ; $09866D | | - 4
+  sub   #4                                  ; $09866E |/ (right = -4, left = 4)
+  iwt   r1,#$017E                           ; $098670 | wheel X
+  iwt   r2,#$0184                           ; $098673 | wheel Y
+  lms   r3,($0094)                          ; $098676 | r3 = [camera_X]
+  lms   r4,($009C)                          ; $098679 | r4 = [camera_Y]
+  ibt   r5,#$0010                           ; $09867C |\
+  lms   r0,($0112)                          ; $09867E | | [wheel_Y_offset]
+  sub   r5                                  ; $098681 | | r4 = wheel height
+  lms   r5,($0090)                          ; $098682 | | - $10
+  add   r5                                  ; $098685 | | + yoshi Y
+  lms   r5,($0198)                          ; $098686 | | - car Y
+  sub   r5                                  ; $098689 | | - camera_Y
+  to r4                                     ; $09868A | |
+  sub   r4                                  ; $09868B |/
+  lms   r5,($0118)                          ; $09868C |\  r5 = [OAM_front_wheels]
+  ibt   r0,#$0030                           ; $09868F | |
+  to r6                                     ; $098691 | | r6 = [OAM_back_wheels]
+  add   r5                                  ; $098692 |/  6 entries past front
+  iwt   r10,#$4002                          ; $098693 |\
+  ibt   r12,#$0002                          ; $098696 | | loop through
+  cache                                     ; $098698 | | both sides (4 wheels)
+  move  r13,r15                             ; $098699 |/
 
-CODE_0986EC:
-  sub   #8                                   ; $0986EC |
-  iwt   r1,#$017E                            ; $0986EE |
-  iwt   r2,#$0184                            ; $0986F1 |
-  ibt   r12,#$0002                           ; $0986F4 |
-  move  r13,r15                              ; $0986F6 |
-  ldw   (r1)                                 ; $0986F8 |
-  sub   #4                                   ; $0986F9 |
-  sub   r3                                   ; $0986FB |
-  stw   (r5)                                 ; $0986FC |
-  sub   r14                                  ; $0986FD |
-  stw   (r6)                                 ; $0986FE |
-  inc   r5                                   ; $0986FF |
-  inc   r5                                   ; $098700 |
-  inc   r6                                   ; $098701 |
-  inc   r6                                   ; $098702 |
-  ldw   (r2)                                 ; $098703 |
-  add   r4                                   ; $098704 |
-  stw   (r5)                                 ; $098705 |
-  stw   (r6)                                 ; $098706 |
-  inc   r5                                   ; $098707 |
-  inc   r5                                   ; $098708 |
-  inc   r6                                   ; $098709 |
-  inc   r6                                   ; $09870A |
-  move  r0,r9                                ; $09870B |
-  stw   (r5)                                 ; $09870D |
-  stw   (r6)                                 ; $09870E |
-  inc   r5                                   ; $09870F |
-  inc   r5                                   ; $098710 |
-  inc   r6                                   ; $098711 |
-  inc   r6                                   ; $098712 |
-  sub   r0                                   ; $098713 |
-  stw   (r5)                                 ; $098714 |
-  from r10                                   ; $098715 |
-  stw   (r6)                                 ; $098716 |
-  inc   r5                                   ; $098717 |
-  inc   r5                                   ; $098718 |
-  inc   r6                                   ; $098719 |
-  with r1                                    ; $09871A |
-  add   #4                                   ; $09871B |
-  with r2                                    ; $09871D |
-  add   #4                                   ; $09871E |
-  loop                                       ; $098720 |
-  inc   r6                                   ; $098721 |
-  with r11                                   ; $098722 |
-  sub   #8                                   ; $098723 |
-  from r11                                   ; $098725 |
-  sub   #1                                   ; $098726 |
-  bpl CODE_0986EC                            ; $098728 |
-  with r4                                    ; $09872A |
-  stop                                       ; $09872B |
-  nop                                        ; $09872C |
+.wheel_OAM_loop
+  ldw   (r1)                                ; $09869B |\
+  sub   #8                                  ; $09869C | | wheel X
+  sub   r3                                  ; $09869E | | - 8
+  stw   (r5)                                ; $09869F | | - camera_X
+  sub   r14                                 ; $0986A0 | | -> word 1 in OAM_front_wheels
+  stw   (r6)                                ; $0986A1 | | (OAM X)
+  inc   r5                                  ; $0986A2 | | +/- 4 (based on facing)
+  inc   r5                                  ; $0986A3 | | -> word 1 in OAM_back_wheels
+  inc   r6                                  ; $0986A4 | |
+  inc   r6                                  ; $0986A5 |/
+  ldw   (r2)                                ; $0986A6 |\
+  add   r4                                  ; $0986A7 | |
+  stw   (r5)                                ; $0986A8 | | wheel Y
+  stw   (r6)                                ; $0986A9 | | + wheel_Y_offset
+  inc   r5                                  ; $0986AA | | -> word 2 in both
+  inc   r5                                  ; $0986AB | | OAM_front_wheels and
+  inc   r6                                  ; $0986AC | | OAM_back_wheels
+  inc   r6                                  ; $0986AD |/
+  from r9                                   ; $0986AE |\
+  stw   (r5)                                ; $0986AF | |
+  from r9                                   ; $0986B0 | | wheel_OAM_3_4
+  stw   (r6)                                ; $0986B1 | | -> word 3 in both
+  inc   r5                                  ; $0986B2 | | OAM_front_wheels and
+  inc   r5                                  ; $0986B3 | | OAM_back_wheels
+  inc   r6                                  ; $0986B4 | |
+  inc   r6                                  ; $0986B5 |/
+  from r10                                  ; $0986B6 |\
+  lob                                       ; $0986B7 | |
+  stw   (r5)                                ; $0986B8 | | size bit on
+  from r10                                  ; $0986B9 | | and forward index
+  stw   (r6)                                ; $0986BA | | -> word 4 in OAM_front_wheels
+  inc   r5                                  ; $0986BB | | size bit on and reverse index
+  inc   r5                                  ; $0986BC | | -> word 4 in OAM_back_wheels
+  inc   r6                                  ; $0986BD |/
+  with r1                                   ; $0986BE |\
+  add   #4                                  ; $0986BF | |
+  with r2                                   ; $0986C1 | | next wheel side
+  add   #4                                  ; $0986C2 | | for x and y
+  loop                                      ; $0986C4 | |
+  inc   r6                                  ; $0986C5 |/  end wheel_OAM_loop
+  lms   r11,($0112)                         ; $0986C6 |\
+  with r11                                  ; $0986C9 | | [wheel_height]
+  sub   #8                                  ; $0986CA | | if wheel height >= 8
+  bpl .prep_wheel_legs                      ; $0986CC | | continue on
+  nop                                       ; $0986CE | | else return now
+  stop                                      ; $0986CF | |
+  nop                                       ; $0986D0 |/
 
-  lms   r0,($00BE)                           ; $09872D |
-  iwt   r1,#$0198                            ; $098730 |
-  sub   r1                                   ; $098733 |
-  beq CODE_098785                            ; $098734 |
-  add   r1                                   ; $098736 |
-  ibt   r0,#$0008                            ; $098737 |
-  romb                                       ; $098739 |
-  lms   r0,($017E)                           ; $09873B |
-  hib                                        ; $09873E |
-  iwt   r14,#$AE18                           ; $09873F |
-  to r14                                     ; $098742 |
-  add   r14                                  ; $098743 |
-  to r6                                      ; $098744 |
-  getbs                                      ; $098745 |
-  iwt   r1,#$F400                            ; $098747 |
-  from r1                                    ; $09874A |
-  to r8                                      ; $09874B |
-  fmult                                      ; $09874C |
-  iwt   r2,#$DC00                            ; $09874D |
-  from r2                                    ; $098750 |
-  to r10                                     ; $098751 |
-  fmult                                      ; $098752 |
-  moves r3,r3                                ; $098753 |
-  bne CODE_09875D                            ; $098755 |
-  with r8                                    ; $098757 |
-  not                                        ; $098758 |
-  inc   r8                                   ; $098759 |
-  with r10                                   ; $09875A |
-  not                                        ; $09875B |
-  inc   r10                                  ; $09875C |
+.prep_wheel_legs
+  ibt   r7,#$001F                           ; $0986D1 |\  [leg_OAM_3_4]
+  from r9                                   ; $0986D3 | | r9 = wheel_OAM_3_4
+  bic   r7                                  ; $0986D4 | | except set tile number to
+  to r9                                     ; $0986D6 | | $0A (for legs)
+  or    #10                                 ; $0986D7 |/
+  with r10                                  ; $0986D9 |\ r10 = $4000
+  bic   #2                                  ; $0986DA |/ [wheel_legs_OAM_word_4]
+  lms   r0,($00C4)                          ; $0986DC |\
+  dec   r0                                  ; $0986DF | | [cam_X_facing_adjust]
+  with r3                                   ; $0986E0 | | r3 = camera_X - 1 (right)
+  add   r0                                  ; $0986E1 |/  or + 1 (left)
+  move  r5,r6                               ; $0986E2 |\
+  ibt   r0,#$0030                           ; $0986E4 | | r5 = [OAM_front_legs]
+  with r6                                   ; $0986E6 | | r6 = [OAM_back_legs]
+  add   r0                                  ; $0986E7 |/  6 entries past front
+  with r4                                   ; $0986E8 |\  [leg_Y_offset]
+  add   #4                                  ; $0986E9 | | adjust Y +4 to align
+  with r4                                   ; $0986EB |/  with -8 each loop
 
-CODE_09875D:
-  ibt   r0,#$0040                            ; $09875D |
-  to r14                                     ; $09875F |
-  add   r14                                  ; $098760 |
-  to r6                                      ; $098761 |
-  getbs                                      ; $098762 |
-  from r1                                    ; $098764 |
-  to r7                                      ; $098765 |
-  fmult                                      ; $098766 |
-  from r2                                    ; $098767 |
-  to r9                                      ; $098768 |
-  fmult                                      ; $098769 |
-  lms   r5,($0118)                           ; $09876A |
-  ibt   r0,#$0060                            ; $09876D |
-  to r5                                      ; $09876F |
-  add   r5                                   ; $098770 |
-  ldw   (r5)                                 ; $098771 |
-  add   r8                                   ; $098772 |
-  sbk                                        ; $098773 |
-  inc   r5                                   ; $098774 |
-  inc   r5                                   ; $098775 |
-  ldw   (r5)                                 ; $098776 |
-  add   r7                                   ; $098777 |
-  sbk                                        ; $098778 |
-  ibt   r0,#$0026                            ; $098779 |
-  to r5                                      ; $09877B |
-  add   r5                                   ; $09877C |
-  ldw   (r5)                                 ; $09877D |
-  add   r10                                  ; $09877E |
-  sbk                                        ; $09877F |
-  inc   r5                                   ; $098780 |
-  inc   r5                                   ; $098781 |
-  ldw   (r5)                                 ; $098782 |
-  add   r9                                   ; $098783 |
-  sbk                                        ; $098784 |
+.wheel_legs_loop
+  sub   #8                                  ; $0986EC | leg_Y_offset -= 8
+  iwt   r1,#$017E                           ; $0986EE | wheel X
+  iwt   r2,#$0184                           ; $0986F1 | wheel Y
+  ibt   r12,#$0002                          ; $0986F4 |\ nested loop twice
+  move  r13,r15                             ; $0986F6 |/ left and right
 
-CODE_098785:
-  stop                                       ; $098785 |
-  nop                                        ; $098786 |
+..sides_loop
+  ldw   (r1)                                ; $0986F8 |\
+  sub   #4                                  ; $0986F9 | |
+  sub   r3                                  ; $0986FB | | wheel X
+  stw   (r5)                                ; $0986FC | | - 4
+  sub   r14                                 ; $0986FD | | - cam_X_facing_adjust
+  stw   (r6)                                ; $0986FE | | -> word 1 in OAM_front_legs
+  inc   r5                                  ; $0986FF | | +/- 4 based on facing
+  inc   r5                                  ; $098700 | | -> word 1 in OAM_back_legs
+  inc   r6                                  ; $098701 | |
+  inc   r6                                  ; $098702 |/
+  ldw   (r2)                                ; $098703 |\
+  add   r4                                  ; $098704 | | wheel Y
+  stw   (r5)                                ; $098705 | | + leg_Y_offset
+  stw   (r6)                                ; $098706 | | -> word 2 in both
+  inc   r5                                  ; $098707 | | OAM_front_legs and
+  inc   r5                                  ; $098708 | | OAM_back_legs
+  inc   r6                                  ; $098709 | |
+  inc   r6                                  ; $09870A |/
+  move  r0,r9                               ; $09870B |\
+  stw   (r5)                                ; $09870D | |
+  stw   (r6)                                ; $09870E | | leg_OAM_3_4
+  inc   r5                                  ; $09870F | | -> word 3 in both
+  inc   r5                                  ; $098710 | | OAM_front_legs and
+  inc   r6                                  ; $098711 | | OAM_back_legs
+  inc   r6                                  ; $098712 |/
+  sub   r0                                  ; $098713 |\
+  stw   (r5)                                ; $098714 | | size bit off
+  from r10                                  ; $098715 | | & forward index
+  stw   (r6)                                ; $098716 | | -> word 4 in OAM_front_legs
+  inc   r5                                  ; $098717 | | size bit off
+  inc   r5                                  ; $098718 | | & reverse index
+  inc   r6                                  ; $098719 |/  -> word 4 in OAM_back_legs
+  with r1                                   ; $09871A |\
+  add   #4                                  ; $09871B | |
+  with r2                                   ; $09871D | | next wheel side
+  add   #4                                  ; $09871E | | for x and y
+  loop                                      ; $098720 | |
+  inc   r6                                  ; $098721 |/  end nested sides_loop
+  with r11                                  ; $098722 |\ wheel_height -= 8
+  sub   #8                                  ; $098723 |/ next leg pair (both sides)
+  from r11                                  ; $098725 |\
+  sub   #1                                  ; $098726 | | if we've reached
+  bpl .wheel_legs_loop                      ; $098728 | | zero wheel_height,
+  with r4                                   ; $09872A |/  end wheel_legs_loop
+  stop                                      ; $09872B |
+  nop                                       ; $09872C |
 
-  stop                                       ; $098787 |
-  nop                                        ; $098788 |
+; this is a radial adjustment of both
+; mole arms, they've already been
+; "drawn" elsewhere
+adjust_mole_arms:
+  lms   r0,($00BE)                          ; $09872D |\
+  iwt   r1,#$0198                           ; $098730 | | is Yoshi anim frame
+  sub   r1                                  ; $098733 | | exactly $0198?
+  beq .ret                                  ; $098734 | | idle so no arm adjust
+  add   r1                                  ; $098736 |/
+  ibt   r0,#$0008                           ; $098737 |\
+  romb                                      ; $098739 | | [mole_cos]
+  lms   r0,($017E)                          ; $09873B | | data bank $08 for
+  hib                                       ; $09873E | | 8-bit cosine lookup
+  iwt   r14,#cosine_8                       ; $09873F | | r6 = cos(mole angle)
+  to r14                                    ; $098742 | |
+  add   r14                                 ; $098743 | |
+  to r6                                     ; $098744 | |
+  getbs                                     ; $098745 |/
+  iwt   r1,#$F400                           ; $098747 |\  [mole_arm1_X_adj]
+  from r1                                   ; $09874A | | r8 = mole_cos * $F400
+  to r8                                     ; $09874B | | arm 1 radius value
+  fmult                                     ; $09874C |/
+  iwt   r2,#$DC00                           ; $09874D |\  [mole_arm2_X_adj]
+  from r2                                   ; $098750 | | r10 = mole_cos * $DC00
+  to r10                                    ; $098751 | | arm 2 radius value
+  fmult                                     ; $098752 |/
+  moves r3,r3                               ; $098753 |\
+  bne .sine                                 ; $098755 | |
+  with r8                                   ; $098757 | |
+  not                                       ; $098758 | | if player_facing left,
+  inc   r8                                  ; $098759 | | negate both r8 and r10
+  with r10                                  ; $09875A | |
+  not                                       ; $09875B | |
+  inc   r10                                 ; $09875C |/
 
-  lms   r0,($00BE)                           ; $098789 |
-  iwt   r1,#$0186                            ; $09878C |
-  sub   r1                                   ; $09878F |
-  bne CODE_0987DF                            ; $098790 |
-  nop                                        ; $098792 |
-  ibt   r0,#$0008                            ; $098793 |
-  romb                                       ; $098795 |
-  lms   r0,($017E)                           ; $098797 |
-  hib                                        ; $09879A |
-  move  r6,r0                                ; $09879B |
-  ibt   r7,#$0040                            ; $09879D |
-  add   r7                                   ; $09879F |
-  sex                                        ; $0987A0 |
-  bpl CODE_0987AB                            ; $0987A1 |
-  nop                                        ; $0987A3 |
-  ibt   r0,#$007F                            ; $0987A4 |
-  xor   r6                                   ; $0987A6 |
-  inc   r0                                   ; $0987A8 |
-  to r6                                      ; $0987A9 |
-  lob                                        ; $0987AA |
+.sine
+  ibt   r0,#$0040                           ; $09875D |\
+  to r14                                    ; $09875F | | [mole_sin]
+  add   r14                                 ; $098760 | | r6 = sin(mole angle)
+  to r6                                     ; $098761 | | ($40 past cos = sin)
+  getbs                                     ; $098762 |/
+  from r1                                   ; $098764 |\  [mole_arm1_Y_adj]
+  to r7                                     ; $098765 | | r7 = mole_sin * $F400
+  fmult                                     ; $098766 |/  r * sin
+  from r2                                   ; $098767 |\  [mole_arm2_Y_adj]
+  to r9                                     ; $098768 | | r9 = mole_sin * $DC00
+  fmult                                     ; $098769 |/  r * sin
+  lms   r5,($0118)                          ; $09876A |\
+  ibt   r0,#$0060                           ; $09876D | | move $60 (12 entries)
+  to r5                                     ; $09876F | | past Yoshi body in OAM
+  add   r5                                  ; $098770 |/  to get to arm 1
+  ldw   (r5)                                ; $098771 |\
+  add   r8                                  ; $098772 | | adjust arm 1's X
+  sbk                                       ; $098773 | | + mole_arm1_X_adj
+  inc   r5                                  ; $098774 | |
+  inc   r5                                  ; $098775 |/
+  ldw   (r5)                                ; $098776 |\
+  add   r7                                  ; $098777 | | arm 1 Y += mole_arm1_Y_adj
+  sbk                                       ; $098778 |/
+  ibt   r0,#$0026                           ; $098779 |\
+  to r5                                     ; $09877B | | move 5 entries up
+  add   r5                                  ; $09877C |/  to get to arm 2
+  ldw   (r5)                                ; $09877D |\
+  add   r10                                 ; $09877E | |
+  sbk                                       ; $09877F | | arm 2 X += mole_arm2_X_adj
+  inc   r5                                  ; $098780 | |
+  inc   r5                                  ; $098781 |/
+  ldw   (r5)                                ; $098782 |\
+  add   r9                                  ; $098783 | | arm2 Y += mole_arm2_Y_adj
+  sbk                                       ; $098784 |/
 
-CODE_0987AB:
-  iwt   r0,#$AE18                            ; $0987AB |
-  to r14                                     ; $0987AE |
-  add   r6                                   ; $0987AF |
-  getbs                                      ; $0987B0 |
-  iwt   r6,#$F000                            ; $0987B2 |
-  to r7                                      ; $0987B5 |
-  fmult                                      ; $0987B6 |
-  ibt   r0,#$0040                            ; $0987B7 |
-  to r14                                     ; $0987B9 |
-  add   r14                                  ; $0987BA |
-  getbs                                      ; $0987BB |
-  to r8                                      ; $0987BD |
-  fmult                                      ; $0987BE |
-  moves r3,r3                                ; $0987BF |
-  beq CODE_0987C6                            ; $0987C1 |
-  with r8                                    ; $0987C3 |
-  not                                        ; $0987C4 |
-  inc   r8                                   ; $0987C5 |
+.ret
+  stop                                      ; $098785 |
+  nop                                       ; $098786 |
 
-CODE_0987C6:
-  lms   r5,($0118)                           ; $0987C6 |
-  ibt   r0,#$0060                            ; $0987C9 |
-  to r5                                      ; $0987CB |
-  add   r5                                   ; $0987CC |
-  ibt   r6,#$0006                            ; $0987CD |
-  cache                                      ; $0987CF |
-  ibt   r12,#$0004                           ; $0987D0 |
-  move  r13,r15                              ; $0987D2 |
-  ldw   (r5)                                 ; $0987D4 |
-  add   r8                                   ; $0987D5 |
-  sbk                                        ; $0987D6 |
-  inc   r5                                   ; $0987D7 |
-  inc   r5                                   ; $0987D8 |
-  ldw   (r5)                                 ; $0987D9 |
-  add   r7                                   ; $0987DA |
-  with r5                                    ; $0987DB |
-  add   r6                                   ; $0987DC |
-  loop                                       ; $0987DD |
-  sbk                                        ; $0987DE |
+; helicopter Yoshi draws nothing further
+ret_helicopter:
+  stop                                      ; $098787 |
+  nop                                       ; $098788 |
 
-CODE_0987DF:
-  stop                                       ; $0987DF |
-  nop                                        ; $0987E0 |
+; this is a radial adjustment of the
+; train body, it's already been
+; "drawn" elsewhere
+adjust_train:
+  lms   r0,($00BE)                          ; $098789 |\
+  iwt   r1,#$0186                           ; $09878C | | if Yoshi anim frame
+  sub   r1                                  ; $09878F | | is NOT $0186, return
+  bne .ret                                  ; $098790 | | this frame is regular train
+  nop                                       ; $098792 |/
+  ibt   r0,#$0008                           ; $098793 |\ data bank for cosine lookup
+  romb                                      ; $098795 |/
+  lms   r0,($017E)                          ; $098797 |\  [train_angle]
+  hib                                       ; $09879A | | r6 = angle of train
+  move  r6,r0                               ; $09879B |/  (high byte)
+  ibt   r7,#$0040                           ; $09879D |\
+  add   r7                                  ; $09879F | | attempts to do a "modulus"
+  sex                                       ; $0987A0 | | to get $00-$40 range
+  bpl .cos                                  ; $0987A1 | | angles from $40-$BF will
+  nop                                       ; $0987A3 | | not branch because $40 + angle
+  ibt   r0,#$007F                           ; $0987A4 | | will have sign bit on
+  xor   r6                                  ; $0987A6 | | train_angle = 7-bit negate
+  inc   r0                                  ; $0987A8 | | if needed, wrapping around to
+  to r6                                     ; $0987A9 | | $00-$40
+  lob                                       ; $0987AA |/
 
-  stop                                       ; $0987E1 |
-  nop                                        ; $0987E2 |
+.cos
+  iwt   r0,#cosine_8                        ; $0987AB |\
+  to r14                                    ; $0987AE | | [train_cos]
+  add   r6                                  ; $0987AF | | r0 = cos(train_angle)
+  getbs                                     ; $0987B0 |/
+  iwt   r6,#$F000                           ; $0987B2 |\  [train_Y_adj]
+  to r7                                     ; $0987B5 | | r7 = train_cos * $F000 (radius)
+  fmult                                     ; $0987B6 |/
+  ibt   r0,#$0040                           ; $0987B7 |\
+  to r14                                    ; $0987B9 | | [train_sin]
+  add   r14                                 ; $0987BA | | r0 = sin(train_angle)
+  getbs                                     ; $0987BB |/  ($40 past cos = sin)
+  to r8                                     ; $0987BD |\ [train_X_adj]
+  fmult                                     ; $0987BE |/ r8 = train_sin * $F000 (radius)
+  moves r3,r3                               ; $0987BF |\
+  beq .adjust_OAM                           ; $0987C1 | | if player_facing left,
+  with r8                                   ; $0987C3 | | negate train_X_adj
+  not                                       ; $0987C4 | |
+  inc   r8                                  ; $0987C5 |/
 
-  stop                                       ; $0987E3 |
-  nop                                        ; $0987E4 |
+.adjust_OAM
+  lms   r5,($0118)                          ; $0987C6 |\
+  ibt   r0,#$0060                           ; $0987C9 | | 12 entries past Yoshi body
+  to r5                                     ; $0987CB | | = train body
+  add   r5                                  ; $0987CC |/
+  ibt   r6,#$0006                           ; $0987CD |\
+  cache                                     ; $0987CF | | prepare OAM_loop
+  ibt   r12,#$0004                          ; $0987D0 | | 4 pieces of train body
+  move  r13,r15                             ; $0987D2 |/
 
-  stop                                       ; $0987E5 |
-  nop                                        ; $0987E6 |
+.OAM_loop
+  ldw   (r5)                                ; $0987D4 |\
+  add   r8                                  ; $0987D5 | | train body X +=
+  sbk                                       ; $0987D6 | | train_X_adj
+  inc   r5                                  ; $0987D7 | |
+  inc   r5                                  ; $0987D8 |/
+  ldw   (r5)                                ; $0987D9 |\ train body Y +=
+  add   r7                                  ; $0987DA |/ train_Y_adj
+  with r5                                   ; $0987DB |\
+  add   r6                                  ; $0987DC |/ next OAM entry
+  loop                                      ; $0987DD |
+  sbk                                       ; $0987DE | end OAM_loop
 
-; Super Baby Mario form handler
-  ibt   r0,#$0008                            ; $0987E7 |
-  romb                                       ; $0987E9 |
-  lms   r0,($00BE)                           ; $0987EB |
-  iwt   r14,#$0124                           ; $0987EE |
-  sub   r14                                  ; $0987F1 |
-  beq CODE_098838                            ; $0987F2 |
-  nop                                        ; $0987F4 |
-  lms   r0,($0180)                           ; $0987F5 |
-  dec   r0                                   ; $0987F8 |
-  bmi CODE_098836                            ; $0987F9 |
-  nop                                        ; $0987FB |
-  lms   r0,($017E)                           ; $0987FC |
-  iwt   r14,#$AE18                           ; $0987FF |
-  to r14                                     ; $098802 |
-  add   r14                                  ; $098803 |
-  getbs                                      ; $098804 |
-  iwt   r6,#$D000                            ; $098806 |
-  fmult                                      ; $098809 |
-  ibt   r7,#$000E                            ; $09880A |
-  to r7                                      ; $09880C |
-  add   r7                                   ; $09880D |
+.ret
+  stop                                      ; $0987DF |
+  nop                                       ; $0987E0 |
 
-CODE_09880E:
-  ibt   r0,#$0040                            ; $09880E |
-  to r14                                     ; $098810 |
-  add   r14                                  ; $098811 |
-  getbs                                      ; $098812 |
-  to r8                                      ; $098814 |
-  fmult                                      ; $098815 |
-  moves r3,r3                                ; $098816 |
-  beq CODE_09881D                            ; $098818 |
-  with r8                                    ; $09881A |
-  not                                        ; $09881B |
-  inc   r8                                   ; $09881C |
+; this is the routine to draw
+; or adjust the Mushroom Yoshi
+; form which never came to be
+; it does nothing
+ret_mushroom:
+  stop                                      ; $0987E1 |
+  nop                                       ; $0987E2 |
 
-CODE_09881D:
-  lms   r5,($0118)                           ; $09881D |
-  ibt   r0,#$0060                            ; $098820 |
-  to r5                                      ; $098822 |
-  add   r5                                   ; $098823 |
-  ibt   r6,#$0006                            ; $098824 |
-  cache                                      ; $098826 |
-  ibt   r12,#$0004                           ; $098827 |
-  move  r13,r15                              ; $098829 |
-  ldw   (r5)                                 ; $09882B |
-  add   r8                                   ; $09882C |
-  sbk                                        ; $09882D |
-  inc   r5                                   ; $09882E |
-  inc   r5                                   ; $09882F |
-  ldw   (r5)                                 ; $098830 |
-  add   r7                                   ; $098831 |
-  with r5                                    ; $098832 |
-  add   r6                                   ; $098833 |
-  loop                                       ; $098834 |
-  sbk                                        ; $098835 |
+; submarine Yoshi draws nothing further
+ret_submarine:
+  stop                                      ; $0987E3 |
+  nop                                       ; $0987E4 |
 
-CODE_098836:
-  stop                                       ; $098836 |
-  nop                                        ; $098837 |
+; this is both Ski Yoshi and Plane Yoshi,
+; another form that never came to be
+; neither do anything
+ret_ski_plane:
+  stop                                      ; $0987E5 |
+  nop                                       ; $0987E6 |
 
-CODE_098838:
-  lms   r0,($017E)                           ; $098838 |
-  iwt   r14,#$AE18                           ; $09883B |
-  to r14                                     ; $09883E |
-  add   r14                                  ; $09883F |
-  getbs                                      ; $098840 |
-  iwt   r6,#$3000                            ; $098842 |
-  fmult                                      ; $098845 |
-  ibt   r7,#$000A                            ; $098846 |
-  to r7                                      ; $098848 |
-  bra CODE_09880E                            ; $098849 |
-  sub   r7                                   ; $09884B |
+; adjusts Super Baby Mario's body OAM
+; angular/radially based on
+; cape / running
+adjust_mario:
+  ibt   r0,#$0008                           ; $0987E7 |\ data bank for cosine lookup
+  romb                                      ; $0987E9 |/
+  lms   r0,($00BE)                          ; $0987EB |\
+  iwt   r14,#$0124                          ; $0987EE | | if Yoshi anim frame
+  sub   r14                                 ; $0987F1 | | is $0124
+  beq .caping                               ; $0987F2 | | this means Mario is caping
+  nop                                       ; $0987F4 |/
+  lms   r0,($0180)                          ; $0987F5 |\
+  dec   r0                                  ; $0987F8 | | if mario not running
+  bmi .ret                                  ; $0987F9 | | or caping, return
+  nop                                       ; $0987FB |/
+  lms   r0,($017E)                          ; $0987FC |\
+  iwt   r14,#cosine_8                       ; $0987FF | |
+  to r14                                    ; $098802 | | [mario_Y_adj]
+  add   r14                                 ; $098803 | | r7 = cos(mario angle)
+  getbs                                     ; $098804 | | * radius $D000
+  iwt   r6,#$D000                           ; $098806 | | + 14
+  fmult                                     ; $098809 | |
+  ibt   r7,#$000E                           ; $09880A | | [mario_radius] = $D000
+  to r7                                     ; $09880C | |
+  add   r7                                  ; $09880D |/
 
-  ibt   r0,#$0008                            ; $09884C |
-  romb                                       ; $09884E |
-  iwt   r1,#$11E0                            ; $098850 |
-  iwt   r2,#$1280                            ; $098853 |
-  iwt   r3,#$10A0                            ; $098856 |
-  iwt   r9,#$1140                            ; $098859 |
-  iwt   r7,#$0EC0                            ; $09885C |
-  iwt   r8,#$15A0                            ; $09885F |
-  iwt   r10,#$1500                           ; $098862 |
-  iwt   r5,#$1822                            ; $098865 |
-  cache                                      ; $098868 |
-  ibt   r12,#$0028                           ; $098869 |
-  move  r13,r15                              ; $09886B |
-  ldb   (r7)                                 ; $09886D |
-  inc   r7                                   ; $09886F |
-  inc   r7                                   ; $098870 |
-  sub   #12                                  ; $098871 |
-  bcs CODE_09888A                            ; $098873 |
-  to r6                                      ; $098875 |
-  ibt   r0,#$0004                            ; $098876 |
-  to r1                                      ; $098878 |
-  add   r1                                   ; $098879 |
-  to r2                                      ; $09887A |
-  add   r2                                   ; $09887B |
-  to r3                                      ; $09887C |
-  add   r3                                   ; $09887D |
-  to r9                                      ; $09887E |
-  add   r9                                   ; $09887F |
-  to r8                                      ; $098880 |
-  add   r8                                   ; $098881 |
-  to r5                                      ; $098882 |
-  add   r5                                   ; $098883 |
-  to r10                                     ; $098884 |
-  add   r10                                  ; $098885 |
-  iwt   r15,#$8921                           ; $098886 |
-  inc   r7                                   ; $098889 |
+.sine
+  ibt   r0,#$0040                           ; $09880E |\
+  to r14                                    ; $098810 | | [mario_X_adj]
+  add   r14                                 ; $098811 | | r8 = sin(mario angle)
+  getbs                                     ; $098812 | | * mario_radius
+  to r8                                     ; $098814 | |
+  fmult                                     ; $098815 |/
+  moves r3,r3                               ; $098816 |\
+  beq .adjust_OAM                           ; $098818 | | if player_facing left,
+  with r8                                   ; $09881A | | negate mario_X_adj
+  not                                       ; $09881B | |
+  inc   r8                                  ; $09881C |/
+
+.adjust_OAM
+  lms   r5,($0118)                          ; $09881D |\
+  ibt   r0,#$0060                           ; $098820 | | 12 entries past Yoshi body
+  to r5                                     ; $098822 | | = mario body
+  add   r5                                  ; $098823 |/
+  ibt   r6,#$0006                           ; $098824 |\
+  cache                                     ; $098826 | | prepare OAM_loop
+  ibt   r12,#$0004                          ; $098827 | | 4 pieces of mario body
+  move  r13,r15                             ; $098829 |/
+
+.OAM_loop
+  ldw   (r5)                                ; $09882B |\
+  add   r8                                  ; $09882C | | mario body X +=
+  sbk                                       ; $09882D | | mario_X_adj
+  inc   r5                                  ; $09882E | |
+  inc   r5                                  ; $09882F |/
+  ldw   (r5)                                ; $098830 |\ mario body Y +=
+  add   r7                                  ; $098831 |/ mario_Y_adj
+  with r5                                   ; $098832 |\
+  add   r6                                  ; $098833 |/ next OAM entry
+  loop                                      ; $098834 |
+  sbk                                       ; $098835 | end OAM_loop
+
+.ret
+  stop                                      ; $098836 |
+  nop                                       ; $098837 |
+
+.caping
+  lms   r0,($017E)                          ; $098838 |\
+  iwt   r14,#cosine_8                       ; $09883B | |
+  to r14                                    ; $09883E | | [mario_Y_adj]
+  add   r14                                 ; $09883F | | r7 = cos(mario angle)
+  getbs                                     ; $098840 | | * radius $3000
+  iwt   r6,#$3000                           ; $098842 | | + 10
+  fmult                                     ; $098845 | | [mario_radius] = $3000
+  ibt   r7,#$000A                           ; $098846 | | spaghetti code! use a diff.
+  to r7                                     ; $098848 | | radius & offset for caping
+  bra .sine                                 ; $098849 | | then branch back up to sine
+  sub   r7                                  ; $09884B |/
+
+  ibt   r0,#$0008                           ; $09884C |
+  romb                                      ; $09884E |
+  iwt   r1,#$11E0                           ; $098850 |
+  iwt   r2,#$1280                           ; $098853 |
+  iwt   r3,#$10A0                           ; $098856 |
+  iwt   r9,#$1140                           ; $098859 |
+  iwt   r7,#$0EC0                           ; $09885C |
+  iwt   r8,#$15A0                           ; $09885F |
+  iwt   r10,#$1500                          ; $098862 |
+  iwt   r5,#$1822                           ; $098865 |
+  cache                                     ; $098868 |
+  ibt   r12,#$0028                          ; $098869 |
+  move  r13,r15                             ; $09886B |
+  ldb   (r7)                                ; $09886D |
+  inc   r7                                  ; $09886F |
+  inc   r7                                  ; $098870 |
+  sub   #12                                 ; $098871 |
+  bcs CODE_09888A                           ; $098873 |
+  to r6                                     ; $098875 |
+  ibt   r0,#$0004                           ; $098876 |
+  to r1                                     ; $098878 |
+  add   r1                                  ; $098879 |
+  to r2                                     ; $09887A |
+  add   r2                                  ; $09887B |
+  to r3                                     ; $09887C |
+  add   r3                                  ; $09887D |
+  to r9                                     ; $09887E |
+  add   r9                                  ; $09887F |
+  to r8                                     ; $098880 |
+  add   r8                                  ; $098881 |
+  to r5                                     ; $098882 |
+  add   r5                                  ; $098883 |
+  to r10                                    ; $098884 |
+  add   r10                                 ; $098885 |
+  iwt   r15,#$8921                          ; $098886 |
+  inc   r7                                  ; $098889 |
 
 CODE_09888A:
-  ldw   (r1)                                 ; $09888A |
-  ldw   (r7)                                 ; $09888B |
-  move  r4,r0                                ; $09888C |
-  hib                                        ; $09888E |
-  mult  #8                                   ; $09888F |
-  to r11                                     ; $098891 |
-  add   r0                                   ; $098892 |
-  from r4                                    ; $098893 |
-  lob                                        ; $098894 |
-  iwt   r14,#$AE58                           ; $098895 |
-  to r14                                     ; $098898 |
-  add   r14                                  ; $098899 |
-  ldw   (r8)                                 ; $09889A |
-  sub   r6                                   ; $09889B |
-  bpl CODE_0988A1                            ; $09889C |
-  ldw   (r10)                                ; $09889E |
-  not                                        ; $09889F |
-  inc   r0                                   ; $0988A0 |
+  ldw   (r1)                                ; $09888A |
+  ldw   (r7)                                ; $09888B |
+  move  r4,r0                               ; $09888C |
+  hib                                       ; $09888E |
+  mult  #8                                  ; $09888F |
+  to r11                                    ; $098891 |
+  add   r0                                  ; $098892 |
+  from r4                                   ; $098893 |
+  lob                                       ; $098894 |
+  iwt   r14,#$AE58                          ; $098895 |
+  to r14                                    ; $098898 |
+  add   r14                                 ; $098899 |
+  ldw   (r8)                                ; $09889A |
+  sub   r6                                  ; $09889B |
+  bpl CODE_0988A1                           ; $09889C |
+  ldw   (r10)                               ; $09889E |
+  not                                       ; $09889F |
+  inc   r0                                  ; $0988A0 |
 
 CODE_0988A1:
-  add   r6                                   ; $0988A1 |
-  stw   (r1)                                 ; $0988A2 |
-  add   r11                                  ; $0988A3 |
-  add   r0                                   ; $0988A4 |
-  to r6                                      ; $0988A5 |
-  add   r0                                   ; $0988A6 |
-  getb                                       ; $0988A7 |
-  ibt   r4,#$0040                            ; $0988A8 |
-  with r14                                   ; $0988AA |
-  sub   r4                                   ; $0988AB |
-  swap                                       ; $0988AC |
-  to r11                                     ; $0988AD |
-  fmult                                      ; $0988AE |
-  getb                                       ; $0988AF |
-  swap                                       ; $0988B0 |
-  to r6                                      ; $0988B1 |
-  fmult                                      ; $0988B2 |
-  iwt   r14,#$0100                           ; $0988B3 |
-  ldw   (r5)                                 ; $0988B6 |
-  dec   r0                                   ; $0988B7 |
-  swap                                       ; $0988B8 |
-  bmi CODE_0988C0                            ; $0988B9 |
-  swap                                       ; $0988BB |
-  inc   r0                                   ; $0988BC |
-  to r14                                     ; $0988BD |
-  hib                                        ; $0988BE |
-  inc   r14                                  ; $0988BF |
+  add   r6                                  ; $0988A1 |
+  stw   (r1)                                ; $0988A2 |
+  add   r11                                 ; $0988A3 |
+  add   r0                                  ; $0988A4 |
+  to r6                                     ; $0988A5 |
+  add   r0                                  ; $0988A6 |
+  getb                                      ; $0988A7 |
+  ibt   r4,#$0040                           ; $0988A8 |
+  with r14                                  ; $0988AA |
+  sub   r4                                  ; $0988AB |
+  swap                                      ; $0988AC |
+  to r11                                    ; $0988AD |
+  fmult                                     ; $0988AE |
+  getb                                      ; $0988AF |
+  swap                                      ; $0988B0 |
+  to r6                                     ; $0988B1 |
+  fmult                                     ; $0988B2 |
+  iwt   r14,#$0100                          ; $0988B3 |
+  ldw   (r5)                                ; $0988B6 |
+  dec   r0                                  ; $0988B7 |
+  swap                                      ; $0988B8 |
+  bmi CODE_0988C0                           ; $0988B9 |
+  swap                                      ; $0988BB |
+  inc   r0                                  ; $0988BC |
+  to r14                                    ; $0988BD |
+  hib                                       ; $0988BE |
+  inc   r14                                 ; $0988BF |
 
 CODE_0988C0:
-  from r14                                   ; $0988C0 |
-  lmult                                      ; $0988C1 |
-  with r4                                    ; $0988C3 |
-  hib                                        ; $0988C4 |
-  lob                                        ; $0988C5 |
-  swap                                       ; $0988C6 |
-  or    r4                                   ; $0988C7 |
-  move  r6,r0                                ; $0988C8 |
-  beq CODE_0988D7                            ; $0988CA |
-  lob                                        ; $0988CC |
-  to r4                                      ; $0988CD |
-  swap                                       ; $0988CE |
-  ldw   (r3)                                 ; $0988CF |
-  add   r4                                   ; $0988D0 |
-  sbk                                        ; $0988D1 |
-  from r6                                    ; $0988D2 |
-  hib                                        ; $0988D3 |
-  sex                                        ; $0988D4 |
-  adc   #0                                   ; $0988D5 |
+  from r14                                  ; $0988C0 |
+  lmult                                     ; $0988C1 |
+  with r4                                   ; $0988C3 |
+  hib                                       ; $0988C4 |
+  lob                                       ; $0988C5 |
+  swap                                      ; $0988C6 |
+  or    r4                                  ; $0988C7 |
+  move  r6,r0                               ; $0988C8 |
+  beq CODE_0988D7                           ; $0988CA |
+  lob                                       ; $0988CC |
+  to r4                                     ; $0988CD |
+  swap                                      ; $0988CE |
+  ldw   (r3)                                ; $0988CF |
+  add   r4                                  ; $0988D0 |
+  sbk                                       ; $0988D1 |
+  from r6                                   ; $0988D2 |
+  hib                                       ; $0988D3 |
+  sex                                       ; $0988D4 |
+  adc   #0                                  ; $0988D5 |
 
 CODE_0988D7:
-  stw   (r2)                                 ; $0988D7 |
-  inc   r3                                   ; $0988D8 |
-  inc   r3                                   ; $0988D9 |
-  to r6                                      ; $0988DA |
-  ldw   (r3)                                 ; $0988DB |
-  add   r6                                   ; $0988DC |
-  sbk                                        ; $0988DD |
-  inc   r1                                   ; $0988DE |
-  inc   r1                                   ; $0988DF |
-  inc   r2                                   ; $0988E0 |
-  inc   r2                                   ; $0988E1 |
-  inc   r8                                   ; $0988E2 |
-  inc   r8                                   ; $0988E3 |
-  inc   r10                                  ; $0988E4 |
-  inc   r10                                  ; $0988E5 |
-  ldw   (r8)                                 ; $0988E6 |
-  to r6                                      ; $0988E7 |
-  ldw   (r1)                                 ; $0988E8 |
-  sub   r6                                   ; $0988E9 |
-  bpl CODE_0988EF                            ; $0988EA |
-  ldw   (r10)                                ; $0988EC |
-  not                                        ; $0988ED |
-  inc   r0                                   ; $0988EE |
+  stw   (r2)                                ; $0988D7 |
+  inc   r3                                  ; $0988D8 |
+  inc   r3                                  ; $0988D9 |
+  to r6                                     ; $0988DA |
+  ldw   (r3)                                ; $0988DB |
+  add   r6                                  ; $0988DC |
+  sbk                                       ; $0988DD |
+  inc   r1                                  ; $0988DE |
+  inc   r1                                  ; $0988DF |
+  inc   r2                                  ; $0988E0 |
+  inc   r2                                  ; $0988E1 |
+  inc   r8                                  ; $0988E2 |
+  inc   r8                                  ; $0988E3 |
+  inc   r10                                 ; $0988E4 |
+  inc   r10                                 ; $0988E5 |
+  ldw   (r8)                                ; $0988E6 |
+  to r6                                     ; $0988E7 |
+  ldw   (r1)                                ; $0988E8 |
+  sub   r6                                  ; $0988E9 |
+  bpl CODE_0988EF                           ; $0988EA |
+  ldw   (r10)                               ; $0988EC |
+  not                                       ; $0988ED |
+  inc   r0                                  ; $0988EE |
 
 CODE_0988EF:
-  add   r6                                   ; $0988EF |
-  stw   (r1)                                 ; $0988F0 |
-  to r6                                      ; $0988F1 |
-  add   r11                                  ; $0988F2 |
-  from r14                                   ; $0988F3 |
-  lmult                                      ; $0988F4 |
-  with r4                                    ; $0988F6 |
-  hib                                        ; $0988F7 |
-  lob                                        ; $0988F8 |
-  swap                                       ; $0988F9 |
-  or    r4                                   ; $0988FA |
-  move  r6,r0                                ; $0988FB |
-  beq CODE_09890A                            ; $0988FD |
-  lob                                        ; $0988FF |
-  to r4                                      ; $098900 |
-  swap                                       ; $098901 |
-  ldw   (r9)                                 ; $098902 |
-  add   r4                                   ; $098903 |
-  sbk                                        ; $098904 |
-  from r6                                    ; $098905 |
-  hib                                        ; $098906 |
-  sex                                        ; $098907 |
-  adc   #0                                   ; $098908 |
+  add   r6                                  ; $0988EF |
+  stw   (r1)                                ; $0988F0 |
+  to r6                                     ; $0988F1 |
+  add   r11                                 ; $0988F2 |
+  from r14                                  ; $0988F3 |
+  lmult                                     ; $0988F4 |
+  with r4                                   ; $0988F6 |
+  hib                                       ; $0988F7 |
+  lob                                       ; $0988F8 |
+  swap                                      ; $0988F9 |
+  or    r4                                  ; $0988FA |
+  move  r6,r0                               ; $0988FB |
+  beq CODE_09890A                           ; $0988FD |
+  lob                                       ; $0988FF |
+  to r4                                     ; $098900 |
+  swap                                      ; $098901 |
+  ldw   (r9)                                ; $098902 |
+  add   r4                                  ; $098903 |
+  sbk                                       ; $098904 |
+  from r6                                   ; $098905 |
+  hib                                       ; $098906 |
+  sex                                       ; $098907 |
+  adc   #0                                  ; $098908 |
 
 CODE_09890A:
-  stw   (r2)                                 ; $09890A |
-  inc   r9                                   ; $09890B |
-  inc   r9                                   ; $09890C |
-  to r6                                      ; $09890D |
-  ldw   (r9)                                 ; $09890E |
-  add   r6                                   ; $09890F |
-  sbk                                        ; $098910 |
-  inc   r1                                   ; $098911 |
-  inc   r1                                   ; $098912 |
-  inc   r2                                   ; $098913 |
-  inc   r2                                   ; $098914 |
-  inc   r8                                   ; $098915 |
-  inc   r8                                   ; $098916 |
-  inc   r3                                   ; $098917 |
-  inc   r3                                   ; $098918 |
-  inc   r9                                   ; $098919 |
-  inc   r9                                   ; $09891A |
-  inc   r10                                  ; $09891B |
-  inc   r10                                  ; $09891C |
-  with r5                                    ; $09891D |
-  add   #4                                   ; $09891E |
-  inc   r7                                   ; $098920 |
-  loop                                       ; $098921 |
-  inc   r7                                   ; $098922 |
-  stop                                       ; $098923 |
-  nop                                        ; $098924 |
+  stw   (r2)                                ; $09890A |
+  inc   r9                                  ; $09890B |
+  inc   r9                                  ; $09890C |
+  to r6                                     ; $09890D |
+  ldw   (r9)                                ; $09890E |
+  add   r6                                  ; $09890F |
+  sbk                                       ; $098910 |
+  inc   r1                                  ; $098911 |
+  inc   r1                                  ; $098912 |
+  inc   r2                                  ; $098913 |
+  inc   r2                                  ; $098914 |
+  inc   r8                                  ; $098915 |
+  inc   r8                                  ; $098916 |
+  inc   r3                                  ; $098917 |
+  inc   r3                                  ; $098918 |
+  inc   r9                                  ; $098919 |
+  inc   r9                                  ; $09891A |
+  inc   r10                                 ; $09891B |
+  inc   r10                                 ; $09891C |
+  with r5                                   ; $09891D |
+  add   #4                                  ; $09891E |
+  inc   r7                                  ; $098920 |
+  loop                                      ; $098921 |
+  inc   r7                                  ; $098922 |
+  stop                                      ; $098923 |
+  nop                                       ; $098924 |
 
-; gsu routine
-  lms   r0,($00AC)                          ; $098925 |
-  lm    r1,($1E2A)                          ; $098928 |
-  or    r1                                  ; $09892C |
-  beq CODE_098934                           ; $09892D |
-  nop                                       ; $09892F |
-  iwt   r15,#$89C1                          ; $098930 |
-  nop                                       ; $098933 |
+; this routine handles:
+; screen edge autoscroll death
+; screen edge warp
+; sprite despawning from camera OOB
+; sprite OAM buffer computations & stores ("drawing")
+; parameters:
+; r3: screen edge warp flag ($0000 don't warp)
+; returns:
+; r0: $16 for screen edge warp, $12 for screen edge death, else $00
+gsu_edge_despawn_draw:
+  lms   r0,($00AC)                          ; $098925 |\
+  lm    r1,($1E2A)                          ; $098928 | | if either camera event
+  or    r1                                  ; $09892C | | or nonzero yoshi state
+  beq .check_edges                          ; $09892D | | skip edge warp & death
+  nop                                       ; $09892F | |
+  iwt   r15,#.despawn_sprites               ; $098930 | |
+  nop                                       ; $098933 |/
 
-CODE_098934:
+.check_edges
   lms   r0,($008C)                          ; $098934 | yoshi x
   lms   r1,($0094)                          ; $098937 | camera x
   sub   r1                                  ; $09893A | yoshi - camera x
-  ibt   r2,#$0060                           ; $09893B |
-  ibt   r4,#$0008                           ; $09893D | test if yoshi is to the left
-  to r6                                     ; $09893F |
-  sub   r4                                  ; $098940 | of left edge of screen
-  bmi CODE_098963                           ; $098941 |
-  nop                                       ; $098943 |
-  iwt   r2,#$0180                           ; $098944 |
-  iwt   r4,#$00E8                           ; $098947 | test if yoshi is to the left
-  to r6                                     ; $09894A |
-  sub   r4                                  ; $09894B | of right edge of screen
-  dec   r6                                  ; $09894C |
-  bmi CODE_0989C1                           ; $09894D |
-  inc   r6                                  ; $09894F |
-  moves r3,r3                               ; $098950 |
-  beq CODE_098963                           ; $098952 |
-  nop                                       ; $098954 |
-  iwt   r4,#$00F8                           ; $098955 |
-  sub   r4                                  ; $098958 |
-  bmi CODE_0989C1                           ; $098959 |
-  nop                                       ; $09895B |
-  ibt   r0,#$0016                           ; $09895C |
-  stop                                      ; $09895E |
+  ibt   r2,#$0060                           ; $09893B | MAP16 terrain right side bits
+  ibt   r4,#$0008                           ; $09893D |\  [yoshi_edge_delta]
+  to r6                                     ; $09893F | | r6 = yoshi x - camera x - 8
+  sub   r4                                  ; $098940 | | if yoshi is within 8 pixels
+  bmi .check_autoscroll_edge_death          ; $098941 | | of left edge of screen
+  nop                                       ; $098943 |/  don't warp
+  iwt   r2,#$0180                           ; $098944 | MAP16 terrain left side bits
+  iwt   r4,#$00E8                           ; $098947 |\  [yoshi_edge_delta]
+  to r6                                     ; $09894A | | r6 = yoshi x - camera x - $E8
+  sub   r4                                  ; $09894B | | if yoshi is at least 24 pixels left
+  dec   r6                                  ; $09894C | | of right edge of screen
+  bmi .despawn_sprites                      ; $09894D | | skip warp & edge death
+  inc   r6                                  ; $09894F |/
+  moves r3,r3                               ; $098950 |\  check screen edge flag
+  beq .check_autoscroll_edge_death          ; $098952 | | if $0000, skip warp
+  nop                                       ; $098954 |/
+  iwt   r4,#$00F8                           ; $098955 |\
+  sub   r4                                  ; $098958 | | if yoshi x - camera x < $F8
+  bmi .despawn_sprites                      ; $098959 | | at least 8 pixels away from right edge
+  nop                                       ; $09895B |/  skip warp & edge death
+  ibt   r0,#$0016                           ; $09895C | if not, return $16
+  stop                                      ; $09895E | meaning screen edge warp!
   nop                                       ; $09895F |
 
-  bra CODE_0989C1                           ; $098960 |
+; dead code
+  bra .despawn_sprites                      ; $098960 |
   nop                                       ; $098962 |
 
-CODE_098963:
-  lm    r5,($1E28)                          ; $098963 |
-  from r6                                   ; $098967 |
-  xor   r5                                  ; $098968 |
-  bpl CODE_098987                           ; $09896A |
-  nop                                       ; $09896C |
-  lms   r0,($00FC)                          ; $09896D |
-  and   r2                                  ; $098970 |
-  beq CODE_098987                           ; $098971 |
-  nop                                       ; $098973 |
-  moves r0,r6                               ; $098974 |
-  bpl CODE_09897B                           ; $098976 |
-  nop                                       ; $098978 |
-  not                                       ; $098979 |
-  inc   r0                                  ; $09897A |
+.check_autoscroll_edge_death
+  lm    r5,($1E28)                          ; $098963 |\  is autoscroll scrolling in
+  from r6                                   ; $098967 | | same direction as
+  xor   r5                                  ; $098968 | | yoshi_edge_delta?
+  bpl .autoscroll_edge_push                 ; $09896A | | if not, we're at the "bad" edge
+  nop                                       ; $09896C |/
+  lms   r0,($00FC)                          ; $09896D |\  so check opposite side (left / right)
+  and   r2                                  ; $098970 | | head & body terrain collision
+  beq .autoscroll_edge_push                 ; $098971 | | if neither, don't squish to DEATH
+  nop                                       ; $098973 |/
+  moves r0,r6                               ; $098974 |\
+  bpl .yoshi_squish_death                   ; $098976 | | r0 = absolute value
+  nop                                       ; $098978 | | of yoshi_edge_delta
+  not                                       ; $098979 | |
+  inc   r0                                  ; $09897A |/
 
-CODE_09897B:
-  sub   #15                                 ; $09897B |
-  bcc CODE_0989C1                           ; $09897D |
-  nop                                       ; $09897F |
-  ibt   r0,#$0012                           ; $098980 |
-  stop                                      ; $098982 |
-  nop                                       ; $098983 |
+.yoshi_squish_death
+  sub   #15                                 ; $09897B |\  if abs(yoshi_edge_delta) < 15
+  bcc .despawn_sprites                      ; $09897D | | means 15 & over outside screen
+  nop                                       ; $09897F |/  edge on either side = death
+  ibt   r0,#$0012                           ; $098980 | return $12
+  stop                                      ; $098982 | which means DIE YOSHI, DIE!!!
+  nop                                       ; $098983 | get squished, NUB!
 
-  bra CODE_0989C1                           ; $098984 |
+; dead code
+  bra .despawn_sprites                      ; $098984 |
   nop                                       ; $098986 |
 
-CODE_098987:
-  lms   r7,($00A8)                          ; $098987 |
-  from r7                                   ; $09898A |
-  sub   r5                                  ; $09898B |
-  xor   r7                                  ; $09898C |
-  bmi CODE_09899D                           ; $09898E |
-  nop                                       ; $098990 |
-  from r5                                   ; $098991 |
-  sbk                                       ; $098992 |
-  sms   ($00B4),r5                          ; $098993 |
-  lm    r0,($1E26)                          ; $098996 |
-  sms   ($008A),r0                          ; $09899A |
+.autoscroll_edge_push
+  lms   r7,($00A8)                          ; $098987 |\
+  from r7                                   ; $09898A | | is autoscroll scrolling in the same
+  sub   r5                                  ; $09898B | | direction as yoshi prev velocity
+  xor   r7                                  ; $09898C | | AND autoscroll velocity is a larger
+  bmi .clamp_edge_delta                     ; $09898E | | absolute value?
+  nop                                       ; $098990 |/
+  from r5                                   ; $098991 |\  if not, this means we must correct
+  sbk                                       ; $098992 | | Yoshi's velocity to stay in bounds
+  sms   ($00B4),r5                          ; $098993 |/  match it to autoscroll's velocity
+  lm    r0,($1E26)                          ; $098996 |\ also match subpixel positions
+  sms   ($008A),r0                          ; $09899A |/ autoscroll -> yoshi
 
-CODE_09899D:
-  from r6                                   ; $09899D |
-  add   #4                                  ; $09899E |
-  bmi CODE_0989A8                           ; $0989A0 |
-  nop                                       ; $0989A2 |
-  sub   #8                                  ; $0989A3 |
-  bcc CODE_0989AC                           ; $0989A5 |
-  nop                                       ; $0989A7 |
+.clamp_edge_delta
+  from r6                                   ; $09899D |\
+  add   #4                                  ; $09899E | |
+  bmi .clamp_edge_delta_math                ; $0989A0 | | if yoshi_edge_delta
+  nop                                       ; $0989A2 | | < -4 or > 4,
+  sub   #8                                  ; $0989A3 | | clamp to +/- 4
+  bcc .push_yoshi                           ; $0989A5 | |
+  nop                                       ; $0989A7 |/
 
-CODE_0989A8:
-  not                                       ; $0989A8 |
-  inc   r0                                  ; $0989A9 |
-  to r6                                     ; $0989AA |
-  add   r6                                  ; $0989AB |
+.clamp_edge_delta_math
+  not                                       ; $0989A8 |\  [yoshi_edge_clamped]
+  inc   r0                                  ; $0989A9 | | performs clamp math if needed
+  to r6                                     ; $0989AA | | r6 = -yoshi_edge_delta +/- 4
+  add   r6                                  ; $0989AB |/  + yoshi_edge_delta, meaning result +/- 4
 
-CODE_0989AC:
-  lms   r0,($008C)                          ; $0989AC |
-  sub   r6                                  ; $0989AF |
-  sbk                                       ; $0989B0 |
-  lm    r5,($1E48)                          ; $0989B1 |
-  moves r5,r5                               ; $0989B5 |
-  bmi CODE_0989C1                           ; $0989B7 |
-  nop                                       ; $0989B9 |
-  iwt   r0,#$10E2                           ; $0989BA |
-  add   r5                                  ; $0989BD |
-  ldw   (r0)                                ; $0989BE |
-  sub   r6                                  ; $0989BF |
-  sbk                                       ; $0989C0 |
+.push_yoshi
+  lms   r0,($008C)                          ; $0989AC |\  push yoshi away from edge
+  sub   r6                                  ; $0989AF | | by at most 4 pixels
+  sbk                                       ; $0989B0 |/
+  lm    r5,($1E48)                          ; $0989B1 |\
+  moves r5,r5                               ; $0989B5 | | if baby mario is not on
+  bmi .despawn_sprites                      ; $0989B7 | | yoshi's back
+  nop                                       ; $0989B9 |/
+  iwt   r0,#$10E2                           ; $0989BA |\
+  add   r5                                  ; $0989BD | | if he is,
+  ldw   (r0)                                ; $0989BE | | push him as well the same
+  sub   r6                                  ; $0989BF | | amount
+  sbk                                       ; $0989C0 |/
 
-CODE_0989C1:
+; move on to despawning sprites
+; checking offscreen basically kills them
+; this also goes through ambient sprites
+.despawn_sprites
   ibt   r0,#$0009                           ; $0989C1 |
   romb                                      ; $0989C3 |
-  iwt   r1,#$1461                           ; $0989C5 |
+  iwt   r1,#$1461                           ; $0989C5 | background layer
   iwt   r2,#$10A2                           ; $0989C8 | x coord
   iwt   r3,#$1142                           ; $0989CB | y coord
   iwt   r4,#$1640                           ; $0989CE | OAM x & y
   iwt   r6,#$0EC0                           ; $0989D1 | sprite state
-  iwt   r9,#$1000                           ; $0989D4 |
-  iwt   r10,#$1460                          ; $0989D7 |
+  iwt   r9,#$1000                           ; $0989D4 | drawing information
+  iwt   r10,#$1460                          ; $0989D7 | stage ID
   cache                                     ; $0989DA |
-  ibt   r12,#$0028                          ; $0989DB |
+  ibt   r12,#$0028                          ; $0989DB | 40 total sprites, including ambient
   move  r13,r15                             ; $0989DD | loop begin through sprite tables
-  ldb   (r6)                                ; $0989DF |
-  dec   r0                                  ; $0989E1 | test for > 0
-  bpl CODE_0989EA                           ; $0989E2 | any state besides 00
-  nop                                       ; $0989E4 |
+
+.sprite_despawn_loop
+  ldb   (r6)                                ; $0989DF |\
+  dec   r0                                  ; $0989E1 | | is sprite state > 0?
+  bpl .check_offscreen                      ; $0989E2 | | any state besides 00
+  nop                                       ; $0989E4 |/
   inc   r4                                  ; $0989E5 |
-  iwt   r15,#$8A6A                          ; $0989E6 | if free slot, skip processing
+  iwt   r15,#.next_sprite                   ; $0989E6 | if free slot, skip processing
   inc   r4                                  ; $0989E9 |
 
-CODE_0989EA:
-  ldb   (r1)                                ; $0989EA | select the X camera to use
-  iwt   r7,#$0094                           ; $0989EC | (layer?)
-  to r7                                     ; $0989EF |
-  add   r7                                  ; $0989F0 |
-  to r7                                     ; $0989F1 |
-  ldw   (r7)                                ; $0989F2 |
-  iwt   r8,#$009C                           ; $0989F3 | select layer Y camera
-  add   r8                                  ; $0989F6 |
-  to r8                                     ; $0989F7 |
-  ldw   (r0)                                ; $0989F8 |
-  ldw   (r2)                                ; $0989F9 | x coord
-  sub   r7                                  ; $0989FA | - layer camera X
-  stw   (r4)                                ; $0989FB | -> 1640,x
-  move  r7,r0                               ; $0989FC | cache in r7
-  ldw   (r3)                                ; $0989FE | y coord
-  sub   r8                                  ; $0989FF | - layer camera Y
-  inc   r4                                  ; $098A00 |
-  inc   r4                                  ; $098A01 |
-  stw   (r4)                                ; $098A02 | -> 1642,x
-  move  r8,r0                               ; $098A03 | cache in r8
-  ldw   (r9)                                ; $098A05 | 1000,x bits 2 & 3
-  and   #12                                 ; $098A06 | get index into 8C83 table
-  beq CODE_098A6A                           ; $098A08 | if 0, go to next sprite
-  nop                                       ; $098A0A |
-  iwt   r14,#$8C83                          ; $098A0B | get first word: x threshold
-  to r14                                    ; $098A0E |
-  add   r14                                 ; $098A0F | in entry in table
-  getb                                      ; $098A10 |
-  inc   r14                                 ; $098A11 |
-  iwt   r11,#$00F0                          ; $098A12 |
-  getbh                                     ; $098A15 |
-  inc   r14                                 ; $098A17 |
-  to r5                                     ; $098A18 |
-  add   r7                                  ; $098A19 | if x threshold + #F0
-  add   r0                                  ; $098A1A | < 1640,x (OAM x coord)
-  add   r11                                 ; $098A1B | offscreen on right side check
-  sub   r5                                  ; $098A1C | w/ threshold
-  bcc CODE_098A2F                           ; $098A1D |
+.check_offscreen
+  ldb   (r1)                                ; $0989EA |\
+  iwt   r7,#$0094                           ; $0989EC | | [layer_X_camera]
+  to r7                                     ; $0989EF | | r7 = proper layer #'s
+  add   r7                                  ; $0989F0 | | X camera based on sprite's
+  to r7                                     ; $0989F1 | | layer #
+  ldw   (r7)                                ; $0989F2 |/
+  iwt   r8,#$009C                           ; $0989F3 |\
+  add   r8                                  ; $0989F6 | | [layer_Y_camera]
+  to r8                                     ; $0989F7 | | r8 = same for Y
+  ldw   (r0)                                ; $0989F8 |/
+  ldw   (r2)                                ; $0989F9 |\  [spr_cam_rel_X]
+  sub   r7                                  ; $0989FA | | r7 = sprite x - layer_X_camera
+  stw   (r4)                                ; $0989FB | | also store into 1640,x
+  move  r7,r0                               ; $0989FC |/
+  ldw   (r3)                                ; $0989FE |\
+  sub   r8                                  ; $0989FF | | [spr_cam_rel_Y]
+  inc   r4                                  ; $098A00 | | r8 = sprite y - layer_Y_camera
+  inc   r4                                  ; $098A01 | | also store into 1642,x
+  stw   (r4)                                ; $098A02 | |
+  move  r8,r0                               ; $098A03 |/
+  ldw   (r9)                                ; $098A05 |\  [despawn_threshold_index]
+  and   #12                                 ; $098A06 | | r0 = 1000,x bits 2 & 3
+  beq .next_sprite                          ; $098A08 | | index into despawn_thresholds
+  nop                                       ; $098A0A |/  if this is 0, don't despawn
+  iwt   r14,#.despawn_thresholds-4          ; $098A0B |\
+  to r14                                    ; $098A0E | |
+  add   r14                                 ; $098A0F | | [despawn_X_threshold]
+  getb                                      ; $098A10 | | r0 = ROM fetch at 8C83 +
+  inc   r14                                 ; $098A11 | | despawn_threshold_index
+  iwt   r11,#$00F0                          ; $098A12 | | grabs first word of entry of table:
+  getbh                                     ; $098A15 | | x threshold
+  inc   r14                                 ; $098A17 |/
+  to r5                                     ; $098A18 |\  if spr_cam_rel_X -
+  add   r7                                  ; $098A19 | | despawn_X_threshold
+  add   r0                                  ; $098A1A | | (unsigned) > $00F0
+  add   r11                                 ; $098A1B | | checks X on both sides
+  sub   r5                                  ; $098A1C | | despawns if offscreen
+  bcc .despawn                              ; $098A1D |/
   sub   r0                                  ; $098A1F |
-  getb                                      ; $098A20 | get next word: y threshold
-  inc   r14                                 ; $098A21 |
-  iwt   r11,#$00C8                          ; $098A22 |
-  getbh                                     ; $098A25 |
-  to r5                                     ; $098A27 |
-  add   r8                                  ; $098A28 |
-  add   r0                                  ; $098A29 | if y threshold + #C8
-  add   r11                                 ; $098A2A | > 1642,x (OAM y coord)
-  sub   r5                                  ; $098A2B | offscreen on bottom check
-  bcs CODE_098A6A                           ; $098A2C | (w/ threshold)
-  sub   r0                                  ; $098A2E |
+  getb                                      ; $098A20 |\  [despawn_Y_threshold]
+  inc   r14                                 ; $098A21 | | r0 = next word: y threshold
+  iwt   r11,#$00C8                          ; $098A22 | |
+  getbh                                     ; $098A25 |/
+  to r5                                     ; $098A27 |\
+  add   r8                                  ; $098A28 | | if spr_cam_rel_Y -
+  add   r0                                  ; $098A29 | | despawn_Y_threshold
+  add   r11                                 ; $098A2A | | (unsigned) > $00C8
+  sub   r5                                  ; $098A2B | | checks Y on top & bottom
+  bcs .next_sprite                          ; $098A2C | | next sprite if onscreen
+  sub   r0                                  ; $098A2E |/
 
-CODE_098A2F:
-  stw   (r6)                                ; $098A2F | kill sprite (#0  -> state)
-  dec   r0                                  ; $098A30 |
-  inc   r1                                  ; $098A31 |
-  stb   (r1)                                ; $098A32 |
-  dec   r1                                  ; $098A34 |
-  ibt   r0,#$0018                           ; $098A35 |
-  sub   r12                                 ; $098A37 |
-  add   r0                                  ; $098A38 |
-  to r8                                     ; $098A39 |
-  add   r0                                  ; $098A3A |
-  ibt   r0,#$0040                           ; $098A3B |
-  add   r8                                  ; $098A3D |
-  iwt   r8,#$16E2                           ; $098A3E |
-  add   r8                                  ; $098A41 |
-  ldw   (r0)                                ; $098A42 |
-  sub   #0                                  ; $098A43 |
-  bmi CODE_098A54                           ; $098A45 |
-  nop                                       ; $098A47 |
-  iwt   r8,#$1ECE                           ; $098A48 |
-  add   r8                                  ; $098A4B |
-  ldw   (r0)                                ; $098A4C |
-  not                                       ; $098A4D |
-  lm    r8,($1ECC)                          ; $098A4E |
-  and   r8                                  ; $098A52 |
-  sbk                                       ; $098A53 |
+.despawn
+  stw   (r6)                                ; $098A2F | $0000 -> state
+  dec   r0                                  ; $098A30 |\
+  inc   r1                                  ; $098A31 | | $FF -> 1462,x
+  stb   (r1)                                ; $098A32 | | byte 3, used to disable drawing
+  dec   r1                                  ; $098A34 |/
+  ibt   r0,#$0018                           ; $098A35 |\
+  sub   r12                                 ; $098A37 | | $A0 - loop index * 4 + 16E2
+  add   r0                                  ; $098A38 | | this gets the current sprite slot
+  to r8                                     ; $098A39 | | based on the loop counter
+  add   r0                                  ; $098A3A | | there weren't enough registers
+  ibt   r0,#$0040                           ; $098A3B | | for every single table
+  add   r8                                  ; $098A3D | | so this needed to be calculated
+  iwt   r8,#$16E2                           ; $098A3E | | because loop counter is backwards
+  add   r8                                  ; $098A41 | | compared to the forward processing
+  ldw   (r0)                                ; $098A42 | | if current sprite's dyntile index is
+  sub   #0                                  ; $098A43 | | $FFFF, meaning no super FX graphics
+  bmi .free_stage_sprite                    ; $098A45 | | then skip freeing dyntile
+  nop                                       ; $098A47 |/
+  iwt   r8,#$1ECE                           ; $098A48 |\
+  add   r8                                  ; $098A4B | | load dyntile reserved information
+  ldw   (r0)                                ; $098A4C | | for current sprite using dyntile index
+  not                                       ; $098A4D | | take the "not" to treat as a mask
+  lm    r8,($1ECC)                          ; $098A4E | | of everything 1 except the sprite's region(s)
+  and   r8                                  ; $098A52 | | mask with currently reserved to effectively
+  sbk                                       ; $098A53 |/  free these dyntile regions
 
-CODE_098A54:
-  ldb   (r10)                               ; $098A54 |
-  iwt   r8,#$28CA                           ; $098A56 |
-  to r8                                     ; $098A59 |
-  add   r8                                  ; $098A5A |
-  sub   r0                                  ; $098A5B |
-  stb   (r8)                                ; $098A5C | store #0  in (28CA + (1460))
-  lm    r0,($01B6)                          ; $098A5E |
-  sub   r12                                 ; $098A62 |
-  bne CODE_098A6A                           ; $098A63 |
-  nop                                       ; $098A65 |
-  sm    ($01B6),r0                          ; $098A66 |
+; this marks the sprite's stage-wide ID
+; as free to spawn in
+.free_stage_sprite
+  ldb   (r10)                               ; $098A54 |\
+  iwt   r8,#$28CA                           ; $098A56 | | grab stage ID from 1460,x
+  to r8                                     ; $098A59 | | $00 -> 7028CA + ID
+  add   r8                                  ; $098A5A | | marks as free
+  sub   r0                                  ; $098A5B | |
+  stb   (r8)                                ; $098A5C |/
+  lm    r0,($01B6)                          ; $098A5E |\  clears the "standing on" slot
+  sub   r12                                 ; $098A62 | | 99% sure this never ever fires
+  bne .next_sprite                          ; $098A63 | | compares a sprite slot ($00-$5C)
+  nop                                       ; $098A65 | | against the loop counter ($00-$28)
+  sm    ($01B6),r0                          ; $098A66 |/  they will never be equal...
 
-CODE_098A6A:
-  ibt   r0,#$0004                           ; $098A6A | next sprite slot
-  to r2                                     ; $098A6C |
-  add   r2                                  ; $098A6D | in all tables
-  to r3                                     ; $098A6E |
-  add   r3                                  ; $098A6F |
-  to r6                                     ; $098A70 |
-  add   r6                                  ; $098A71 |
-  to r9                                     ; $098A72 |
-  add   r9                                  ; $098A73 |
-  to r10                                    ; $098A74 |
-  add   r10                                 ; $098A75 |
-  to r1                                     ; $098A76 |
-  add   r1                                  ; $098A77 |
-  inc   r4                                  ; $098A78 |
-  loop                                      ; $098A79 |
-  inc   r4                                  ; $098A7A |
-  ibt   r0,#$004D                           ; $098A7B | begin nested loop
-  romb                                      ; $098A7D | through table 1462
-  ibt   r11,#$0000                          ; $098A7F | i, outer loop counter
-  iwt   r13,#$8A8F                          ; $098A81 | go through table
-  iwt   r1,#$1462                           ; $098A84 | 8 times, i++ each time
-  iwt   r2,#$1000                           ; $098A87 |
-  cache                                     ; $098A8A | outer loop starts:
-  ibt   r12,#$0028                          ; $098A8B | j, inner loop counter
-  ibt   r10,#$0000                          ; $098A8D |
-  from r1                                   ; $098A8F |
-  add   r10                                 ; $098A90 | inner loop starts here
-  ldw   (r0)                                ; $098A91 |
-  sub   r11                                 ; $098A92 | 1462,x - i
-  beq CODE_098A9A                           ; $098A93 |
-  nop                                       ; $098A95 |
-  iwt   r15,#$8AE5                          ; $098A96 | next sprite if not zero ^
-  inc   r10                                 ; $098A99 |
+.next_sprite
+  ibt   r0,#$0004                           ; $098A6A |\
+  to r2                                     ; $098A6C | |
+  add   r2                                  ; $098A6D | |
+  to r3                                     ; $098A6E | |
+  add   r3                                  ; $098A6F | |
+  to r6                                     ; $098A70 | |
+  add   r6                                  ; $098A71 | | next sprite slot
+  to r9                                     ; $098A72 | | in all tables
+  add   r9                                  ; $098A73 | |
+  to r10                                    ; $098A74 | |
+  add   r10                                 ; $098A75 | |
+  to r1                                     ; $098A76 | |
+  add   r1                                  ; $098A77 | |
+  inc   r4                                  ; $098A78 | |
+  loop                                      ; $098A79 | |
+  inc   r4                                  ; $098A7A |/  end sprite_despawn_loop
 
-CODE_098A9A:
-  iwt   r0,#$13C2                           ; $098A9A | 13C2,x
-  add   r10                                 ; $098A9D | is animation frame
-  ldw   (r0)                                ; $098A9E |
-  move  r9,r0                               ; $098A9F |
-  hib                                       ; $098AA1 | animation frame being $00xx
-  beq CODE_098AC2                           ; $098AA2 |
-  dec   r0                                  ; $098AA4 |
-  bne CODE_098AB2                           ; $098AA5 | animation frame being $01xx
-  to r9                                     ; $098AA7 |
-  sub   r0                                  ; $098AA8 | performs this table read
-  sms   ($0000),r9                          ; $098AA9 |
-  iwt   r14,#$0914                          ; $098AAC |
-  bra CODE_098B16                           ; $098AAF |
+.prep_sprite_priority
+  ibt   r0,#$004D                           ; $098A7B |\  begin nested loop
+  romb                                      ; $098A7D | | through all sprites' 1462,x
+  ibt   r11,#$0000                          ; $098A7F | | r11 = [priority_loop_index]
+  iwt   r13,#$8A8F                          ; $098A81 | | go through all sprites once
+  iwt   r1,#$1462                           ; $098A84 | | per sprite priority
+  iwt   r2,#$1000                           ; $098A87 | | so 8 total, 0-7
+  cache                                     ; $098A8A |/
 
-  getb                                      ; $098AB1 |
+; outer loop starts here
+.sprite_priority_loop
+  ibt   r12,#$0028                          ; $098A8B | r12 = [draw_loop_index]
+  ibt   r10,#$0000                          ; $098A8D | r10 = [draw_sprite_slot]
 
-CODE_098AB2:
-  sub   r0                                  ; $098AB2 | animation frame: anything else
-  sms   ($0000),r9                          ; $098AB3 |
-  sms   ($0058),r12                         ; $098AB6 |
-  ibt   r12,#$0004                          ; $098AB9 |
-  iwt   r14,#$0918                          ; $098ABB |
-  iwt   r15,#$8BAE                          ; $098ABE |
-CODE_098AC1:         alt2
+; inner loop starts here
+.sprite_draw_loop
+  from r1                                   ; $098A8F |\
+  add   r10                                 ; $098A90 | | if 1462,x == priority_loop_index
+  ldw   (r0)                                ; $098A91 | | meaning are we on this sprite's
+  sub   r11                                 ; $098A92 | | priority? if so, draw it
+  beq .check_sprite_anim_frame              ; $098A93 | |
+  nop                                       ; $098A95 |/
+  iwt   r15,#.next_sprite_draw+1            ; $098A96 |\ next sprite if we're not on
+  inc   r10                                 ; $098A99 |/ this sprite's priority
 
-CODE_098AC2:
-  iwt   r0,#$1140                           ; $098AC2 | y coord
-  add   r10                                 ; $098AC5 |
-  ldb   (r0)                                ; $098AC6 | subpixel only
-  mult  #8                                  ; $098AC8 | << 3
-  sms   ($0000),r0                          ; $098ACA | cache in 0000
-  from r2                                   ; $098ACD |
-  add   r10                                 ; $098ACE |
-  ldw   (r0)                                ; $098ACF | 1000,x
-  and   #3                                  ; $098AD0 | bits 0 & 1
-  mult  #3                                  ; $098AD2 | * 3
-  inc   r0                                  ; $098AD4 | + 1
-  to r15                                    ; $098AD5 |
-  add   r15                                 ; $098AD6 | increment PC by ^
+.check_sprite_anim_frame
+  iwt   r0,#$13C2                           ; $098A9A |\  [sprite_anim_frame]
+  add   r10                                 ; $098A9D | | r9 = 13C2,x
+  ldw   (r0)                                ; $098A9E | | animation frame
+  move  r9,r0                               ; $098A9F |/
+  hib                                       ; $098AA1 |\ is sprite_anim_frame
+  beq .sprite_drawing_method                ; $098AA2 |/ $00xx? (high byte 00)
+  dec   r0                                  ; $098AA4 |\ is sprite_anim_frame
+  bne .jump_drawing_method_01               ; $098AA5 |/ NOT $01xx? (high byte 01)
+  to r9                                     ; $098AA7 |\
+  sub   r0                                  ; $098AA8 | | if sprite_anim_frame == $01xx
+  sms   ($0000),r9                          ; $098AA9 | | store $0000 -> ($0000)
+  iwt   r14,#$0914                          ; $098AAC | | and jump to drawing method $00
+  bra .drawing_method_00_compute_OAM        ; $098AAF | | hardcoded load from $4D0914
+  getb                                      ; $098AB1 |/
 
-; weird style of pointer table: this is 00 index
-  iwt   r15,#$8B0B                          ; $098AD7 |
-  ; iwt   r0,#xxxx
+; this code handles high byte of sprite_anim_frame
+; being > $01, so $02xx, $03xx, ...
+.jump_drawing_method_01
+  sub   r0                                  ; $098AB2 |\ store $0000 -> ($0000)
+  sms   ($0000),r9                          ; $098AB3 |/
+  sms   ($0058),r12                         ; $098AB6 | preserve draw_loop_index
+  ibt   r12,#$0004                          ; $098AB9 | begin a new (triple nested) loop
+  iwt   r14,#$0918                          ; $098ABB | hardcoded load of 4D0918
+  iwt   r15,#$8BAE                          ; $098ABE | jump to drawing method 01
+  alt2                                      ; $098AC1 |
+
+.sprite_drawing_method
+  iwt   r0,#$1140                           ; $098AC2 |\  [OBJ_tile_index]
+  add   r10                                 ; $098AC5 | | store sprite's OBJ tile index
+  ldb   (r0)                                ; $098AC6 | | << 3 (if any)
+  mult  #8                                  ; $098AC8 | | -> ($0000)
+  sms   ($0000),r0                          ; $098ACA |/
+  from r2                                   ; $098ACD |\
+  add   r10                                 ; $098ACE | | load 1000,x
+  ldw   (r0)                                ; $098ACF | |
+  and   #3                                  ; $098AD0 | | take bits 0 & 1 (drawing method)
+  mult  #3                                  ; $098AD2 | | * 3 (to line up with ptr table)
+  inc   r0                                  ; $098AD4 | | + 1
+  to r15                                    ; $098AD5 | | increment PC by this much
+  add   r15                                 ; $098AD6 |/  effectively, pointer table
+
+; this is a "pointer table" in Super FX form
+; the PC just gets added onto and then
+; we basically iwt r15,#destination
+.drawing_method_ptr
+  iwt   r15,#.drawing_method_00             ; $098AD7 |
   db $F0                                    ; $098ADA |
+  ; iwt   r0,#xxxx
 
-; 01 index
-  ; iwt   r15,#8B85
-  dw $8B85                                  ; $098ADB |
+  dw .drawing_method_01                     ; $098ADB |
   alt2                                      ; $098ADD |
 
-; 02 index
-  ; iwt   r15,#8C70
-  dw $8C70                                  ; $098ADE |
-  ; iwt   r0,#xxxx
+  dw .drawing_method_02                     ; $098ADE |
   db $F0                                    ; $098AE0 |
+  ; iwt   r0,#xxxx
 
-; 03 index
-  ; iwt   r15,#8C93
-  dw $8C93                                  ; $098AE1 |
+  dw .drawing_method_03                     ; $098AE1 |
   alt2                                      ; $098AE3 |
 
-  inc   r10                                 ; $098AE4 |
-  inc   r10                                 ; $098AE5 | next sprite
-  inc   r10                                 ; $098AE6 |
-  loop                                      ; $098AE7 |
-  inc   r10                                 ; $098AE8 |
-  inc   r11                                 ; $098AE9 | i++
-  lms   r0,($011A)                          ; $098AEA |
-  sub   r11                                 ; $098AED |
-  beq CODE_098AFC                           ; $098AEE | if i == (011A)
-  from r11                                  ; $098AF0 |
-  sub   #8                                  ; $098AF1 |
-  bcs CODE_098AFA                           ; $098AF3 | if i >= 8, completely done
-  nop                                       ; $098AF5 |
-  iwt   r15,#$8A8C                          ; $098AF6 |
-  ; ibt   r12,#xx
+.next_sprite_draw
+  inc   r10                                 ; $098AE4 |\
+  inc   r10                                 ; $098AE5 | | draw_sprite_slot
+  inc   r10                                 ; $098AE6 | | next sprite
+  loop                                      ; $098AE7 | |
+  inc   r10                                 ; $098AE8 |/
+  inc   r11                                 ; $098AE9 | next sprite priority
+  lms   r0,($011A)                          ; $098AEA |\  if priority_loop_index == 011A
+  sub   r11                                 ; $098AED | | this is the "above" layer
+  beq .above_layer                          ; $098AEE |/
+  from r11                                  ; $098AF0 |\  if priority_loop_index >= 8
+  sub   #8                                  ; $098AF1 | | all sprite priorities are done
+  bcs .ret                                  ; $098AF3 | | return
+  nop                                       ; $098AF5 |/
+  iwt   r15,#.sprite_priority_loop+1        ; $098AF6 | else continue sprite_priority_loop
   db $AC                                    ; $098AF9 |
+  ; ibt   r12,#xx
 
-CODE_098AFA:
-  stop                                      ; $098AFA |
-  nop                                       ; $098AFB |
+.ret
+  stop                                      ; $098AFA |\ note: r0 guaranteed = $0000
+  nop                                       ; $098AFB |/ because 8 - 8 is final compare
 
-CODE_098AFC:
-  lms   r8,($0092)                          ; $098AFC |
-  iwt   r0,#$00A0                           ; $098AFF |
-  add   r8                                  ; $098B02 |
-  sbk                                       ; $098B03 |
-  sms   ($0118),r8                          ; $098B04 |
-  iwt   r15,#$8A8C                          ; $098B07 | continue outer loop
-  ; ibt   r12,#0 xx
+.above_layer
+  lms   r8,($0092)                          ; $098AFC |\  reserve $A0 bytes of OAM
+  iwt   r0,#$00A0                           ; $098AFF | | for above layer
+  add   r8                                  ; $098B02 | | (that's 20 sprites)
+  sbk                                       ; $098B03 |/
+  sms   ($0118),r8                          ; $098B04 | above layer OAM address -> 0118
+  iwt   r15,#.sprite_priority_loop+1        ; $098B07 | continue sprite_priority_loop
   db $AC                                    ; $098B0A |
+  ; ibt   r12,#xx
 
-; 00 drawing method
+; drawing method 00 seems to just be a simple
+; single OAM entry that's determined by a pointer at
+; 1A8000 + sprite ID * 2
+; this pointer then adds on anim frame * 2
+; and that is the OAM word for the entry
+.drawing_method_00
   ; iwt r0, #1320
-  dw $1320                                  ; $098B0B |
-  add   r10                                 ; $098B0D | sprite state
-  ldw   (r0)                                ; $098B0E |
-  add   r0                                  ; $098B0F | * 2
-  iwt   r14,#$0000                          ; $098B10 |
-  to r14                                    ; $098B13 |
-  add   r14                                 ; $098B14 | 1A8000,ID
-  getb                                      ; $098B15 |
+  dw $1320                                  ; $098B0B |\
+  add   r10                                 ; $098B0D | | r0 = sprite ID * 2
+  ldw   (r0)                                ; $098B0E | |
+  add   r0                                  ; $098B0F |/
+  iwt   r14,#$0000                          ; $098B10 |\  r0 = read ROM at
+  to r14                                    ; $098B13 | | 1A8000,ID*2
+  add   r14                                 ; $098B14 | | low byte of pointer
+  getb                                      ; $098B15 |/  into method 00 table
 
-CODE_098B16:
-  inc   r14                                 ; $098B16 |
-  iwt   r6,#$1002                           ; $098B17 |
-  with r6                                   ; $098B1A |
-  add   r10                                 ; $098B1B | r6 = 1002,x
-  to r6                                     ; $098B1C |
-  ldw   (r6)                                ; $098B1D | OAM bytes 3 & 4
-  getbh                                     ; $098B1E |
-  add   r9                                  ; $098B20 | r14 = 1A8000,ID +
-  to r14                                    ; $098B21 |
-  add   r9                                  ; $098B22 | anim frame * 2
-  iwt   r0,#$13C0                           ; $098B23 |
-  add   r10                                 ; $098B26 | facing dir
-  ldb   (r0)                                ; $098B27 |
-  add   r0                                  ; $098B29 |
-  add   r0                                  ; $098B2A | << 5
-  mult  #8                                  ; $098B2B | to shift into 7th bit (x flip)
-  xor   r6                                  ; $098B2D | ^ 1002,x
-  to r6                                     ; $098B2F |
-  swap                                      ; $098B30 |
-  with r6                                   ; $098B31 |
-  getbl                                     ; $098B32 | r6 = oam 3 & 4
-  inc   r14                                 ; $098B34 | t[0] = tile number
-  iwt   r0,#$10A0                           ; $098B35 |
-  add   r10                                 ; $098B38 |
-  ldb   (r0)                                ; $098B39 |
-  to r7                                     ; $098B3B |
-  swap                                      ; $098B3C | r7 = low x coord byte
-  getb                                      ; $098B3D | t[1] = byte 4 OAM
-  move  r4,r0                               ; $098B3E | r4 = high table (size)
-  iwt   r9,#$00F1                           ; $098B40 | mask away priority
-  and   r9                                  ; $098B43 | this is for yxpp---t
-  swap                                      ; $098B44 |
-  to r6                                     ; $098B45 |
-  xor   r6                                  ; $098B46 |
-  ibt   r9,#$0000                           ; $098B48 |
-  from r4                                   ; $098B4A |
-  and   #2                                  ; $098B4B | this time, mask size
-  bne CODE_098B52                           ; $098B4D |
-  nop                                       ; $098B4F |
-  ibt   r9,#$0004                           ; $098B50 |
+..compute_OAM
+  inc   r14                                 ; $098B16 | build up OAM 1 piece at a time
+  iwt   r6,#$1002                           ; $098B17 |\
+  with r6                                   ; $098B1A | | r6 = 1002,x
+  add   r10                                 ; $098B1B | | OAM low bytes 3 & 4
+  to r6                                     ; $098B1C | | (yx flip & palette)
+  ldw   (r6)                                ; $098B1D |/
+  getbh                                     ; $098B1E |\
+  add   r9                                  ; $098B20 | | 00 method pointer
+  to r14                                    ; $098B21 | | + sprite_anim_frame * 2
+  add   r9                                  ; $098B22 |/  address of frame's info
+  iwt   r0,#$13C0                           ; $098B23 |\
+  add   r10                                 ; $098B26 | | facing dir to get x/y flip
+  ldb   (r0)                                ; $098B27 | | (00000yx0)
+  add   r0                                  ; $098B29 | | << 5
+  add   r0                                  ; $098B2A | | to shift as yx00000
+  mult  #8                                  ; $098B2B | | ^ 1002,x, swap:
+  xor   r6                                  ; $098B2D | | r6 = yxpp---t 00000000
+  to r6                                     ; $098B2F | |
+  swap                                      ; $098B30 |/
+  with r6                                   ; $098B31 |\  tile number from ROM:
+  getbl                                     ; $098B32 | | r6 = yxpp---t tttttttt
+  inc   r14                                 ; $098B34 |/
+  iwt   r0,#$10A0                           ; $098B35 |\  [sprite_priority_override]
+  add   r10                                 ; $098B38 | | r7 = low x coord byte
+  ldb   (r0)                                ; $098B39 | | sprite priority override
+  to r7                                     ; $098B3B | | -p------ 00000000
+  swap                                      ; $098B3C |/
+  getb                                      ; $098B3D |\  [sprite_high_size]
+  move  r4,r0                               ; $098B3E | | r4 = high table size
+  iwt   r9,#$00F1                           ; $098B40 | | extracts ------s-
+  and   r9                                  ; $098B43 | | size bit from ROM
+  swap                                      ; $098B44 | | and copies it in:
+  to r6                                     ; $098B45 | | r6 = yxpp--st tttttttt
+  xor   r6                                  ; $098B46 |/
+  ibt   r9,#$0000                           ; $098B48 |\  [size_correction]
+  from r4                                   ; $098B4A | | test ------s- size bit
+  and   #2                                  ; $098B4B | | being on or off
+  bne ..store_OAM                           ; $098B4D | | if on, r9 = 0
+  nop                                       ; $098B4F | | if off, r9 = 4
+  ibt   r9,#$0004                           ; $098B50 |/
 
-CODE_098B52:
-  to r7                                     ; $098B52 |
-  xor   r7                                  ; $098B53 | r7 = size ^ MSB x
-  iwt   r0,#$1640                           ; $098B55 | (high table)
-  to r8                                     ; $098B58 |
-  add   r10                                 ; $098B59 |
-  ldw   (r8)                                ; $098B5A | OAM x
-  to r4                                     ; $098B5B |
-  add   r9                                  ; $098B5C | add size correction
-  inc   r8                                  ; $098B5D | (0 or 4)
-  inc   r8                                  ; $098B5E |
-  ldw   (r8)                                ; $098B5F | OAM y
-  to r5                                     ; $098B60 |
-  add   r9                                  ; $098B61 | add size correction
-  lms   r8,($0092)                          ; $098B62 | (0 or 4)
-  iwt   r0,#$1322                           ; $098B65 |
-  add   r10                                 ; $098B68 |
-  from r8                                   ; $098B69 |
-  stw   (r0)                                ; $098B6A | set OAM buffer entry
-  from r4                                   ; $098B6B |
-  stw   (r8)                                ; $098B6C | store OAM x
-  inc   r8                                  ; $098B6D |
-  inc   r8                                  ; $098B6E |
-  from r5                                   ; $098B6F |
-  stw   (r8)                                ; $098B70 | store OAM y
-  inc   r8                                  ; $098B71 |
-  inc   r8                                  ; $098B72 |
-  lms   r0,($0000)                          ; $098B73 |
-  add   r6                                  ; $098B76 |
-  stw   (r8)                                ; $098B77 | store OAM 3 & 4
-  inc   r8                                  ; $098B78 |
-  inc   r8                                  ; $098B79 |
-  from r7                                   ; $098B7A |
-  stw   (r8)                                ; $098B7B | store OAM high
-  inc   r8                                  ; $098B7C |
-  inc   r8                                  ; $098B7D |
-  sms   ($0092),r8                          ; $098B7E | update next free slot
-  iwt   r15,#$8AE5                          ; $098B81 | return
-  inc   r10                                 ; $098B84 |
+..store_OAM
+  to r7                                     ; $098B52 |\ [OAM_buffer_word_4]
+  xor   r7                                  ; $098B53 |/ r7 = -p------ ------s-
+  iwt   r0,#$1640                           ; $098B55 |\
+  to r8                                     ; $098B58 | | [size_corrected_X]
+  add   r10                                 ; $098B59 | | r4 = OAM X (screen rel)
+  ldw   (r8)                                ; $098B5A | | + size_correction
+  to r4                                     ; $098B5B | | (0 or 4)
+  add   r9                                  ; $098B5C |/
+  inc   r8                                  ; $098B5D |\
+  inc   r8                                  ; $098B5E | | [size_corrected_Y]
+  ldw   (r8)                                ; $098B5F | | r5 = OAM Y (screen rel)
+  to r5                                     ; $098B60 | | + size_correction
+  add   r9                                  ; $098B61 |/  (0 or 4)
+  lms   r8,($0092)                          ; $098B62 |\
+  iwt   r0,#$1322                           ; $098B65 | | set sprite's OAM
+  add   r10                                 ; $098B68 | | pointer to this entry
+  from r8                                   ; $098B69 | | (1322,x)
+  stw   (r0)                                ; $098B6A |/
+  from r4                                   ; $098B6B |\ store size_corrected_X
+  stw   (r8)                                ; $098B6C |/ -> word 1 in OAM buffer entry
+  inc   r8                                  ; $098B6D |\
+  inc   r8                                  ; $098B6E | | store size_corrected_Y
+  from r5                                   ; $098B6F | | -> word 2 in OAM buffer entry
+  stw   (r8)                                ; $098B70 |/
+  inc   r8                                  ; $098B71 |\  store yxpp--st tttttttt
+  inc   r8                                  ; $098B72 | | + OBJ_tile_index
+  lms   r0,($0000)                          ; $098B73 | |
+  add   r6                                  ; $098B76 | | -> word 3 in OAM buffer entry
+  stw   (r8)                                ; $098B77 |/
+  inc   r8                                  ; $098B78 |\
+  inc   r8                                  ; $098B79 | | store OAM_buffer_word_4
+  from r7                                   ; $098B7A | | -> word 4 in OAM buffer entry
+  stw   (r8)                                ; $098B7B |/
+  inc   r8                                  ; $098B7C |\  update next free slot
+  inc   r8                                  ; $098B7D | | which claims the space
+  sms   ($0092),r8                          ; $098B7E |/
+  iwt   r15,#.next_sprite_draw+1            ; $098B81 |\ next sprite
+  inc   r10                                 ; $098B84 |/
 
-; 01 drawing method
+.drawing_method_01
   ; sms   (0058),r12
-  db $AC, $2C                               ; $098B85 | preserve outer loop counter
-  iwt   r0,#$1320                           ; $098B87 |
-  add   r10                                 ; $098B8A | sprite ID
-  ldw   (r0)                                ; $098B8B |
-  add   r0                                  ; $098B8C | * 2
-  iwt   r14,#$048A                          ; $098B8D | $1A848A,ID
-  to r14                                    ; $098B90 |
-  add   r14                                 ; $098B91 |
-  iwt   r0,#$1001                           ; $098B92 |
-  add   r10                                 ; $098B95 | OAM buffer byte count
-  ldb   (r0)                                ; $098B96 |
-  iwt   r8,#$00F8                           ; $098B98 |
-  and   r8                                  ; $098B9B |
-  lsr                                       ; $098B9C | / 8, so:
-  lsr                                       ; $098B9D | OAM entry count
-  lsr                                       ; $098B9E |
-  move  r12,r0                              ; $098B9F | loop through sprite's OAM entries
-  to r8                                     ; $098BA1 |
-  getb                                      ; $098BA2 |
-  inc   r14                                 ; $098BA3 |
-  umult #5                                  ; $098BA4 |
-  umult r9                                  ; $098BA6 | r14 = word($1A848A,ID) +
-  with r8                                   ; $098BA8 |
-  getbh                                     ; $098BA9 | entry count * 5 * anim frame
-  to r14                                    ; $098BAB |
-  add   r8                                  ; $098BAC |
-  sms   ($0042),r1                          ; $098BAD |
-  sms   ($0044),r2                          ; $098BB0 | preserve some registers
-  sms   ($0054),r10                         ; $098BB3 |
-  sms   ($005A),r13                         ; $098BB6 |
-  iwt   r0,#$8AE4                           ; $098BB9 | return address
-  sms   ($0060),r0                          ; $098BBC |
-  iwt   r0,#$1002                           ; $098BBF |
-  add   r10                                 ; $098BC2 | 1002,x
-  to r3                                     ; $098BC3 |
-  ldb   (r0)                                ; $098BC4 |
-  iwt   r0,#$13C0                           ; $098BC6 |
-  add   r10                                 ; $098BC9 | face dir
-  ldb   (r0)                                ; $098BCA |
-  add   r0                                  ; $098BCC |
-  add   r0                                  ; $098BCD | << 5
-  mult  #8                                  ; $098BCE | to shift into 7th bit (x flip)
-  xor   r3                                  ; $098BD0 | ^ 1002,x
-  to r3                                     ; $098BD2 |
-  swap                                      ; $098BD3 | -> r3 high byte
-  lms   r4,($0092)                          ; $098BD4 | last ($free)OAM buffer entry
-  iwt   r0,#$1322                           ; $098BD7 |
-  add   r10                                 ; $098BDA | occupy the space and claim it
-  from r4                                   ; $098BDB |
-  stw   (r0)                                ; $098BDC | in 1322,x
-  iwt   r0,#$10A0                           ; $098BDD |
-  add   r10                                 ; $098BE0 | lowest byte of x coord
-  ldb   (r0)                                ; $098BE1 |
-  to r13                                    ; $098BE3 |
-  swap                                      ; $098BE4 | r13 = low byte << 8
-  ibt   r0,#$003C                           ; $098BE5 |
-  sub   r10                                 ; $098BE7 | if sprite slot <= 3C
-  bcs CODE_098BF7                           ; $098BE8 | aka first 16 sprites
-  sub   r0                                  ; $098BEA |
-  iwt   r0,#$1D56                           ; $098BEB | or
-  add   r10                                 ; $098BEE | if 1D56,x - 1 < 0
-  ldw   (r0)                                ; $098BEF |
-  dec   r0                                  ; $098BF0 | then make r0 FFFF
-  bmi CODE_098BF7                           ; $098BF1 |
-  sub   r0                                  ; $098BF3 | otherwise r0 = F1FF
-  iwt   r0,#$F200                           ; $098BF4 | this is for bitmasking
+  db $AC, $2C                               ; $098B85 | preserve draw_loop_index
+  iwt   r0,#$1320                           ; $098B87 |\
+  add   r10                                 ; $098B8A | | r0 = sprite ID * 2
+  ldw   (r0)                                ; $098B8B | |
+  add   r0                                  ; $098B8C |/
+  iwt   r14,#$048A                          ; $098B8D |\  [method_01_pointer]
+  to r14                                    ; $098B90 | | r14 = 1A848A + ID*2
+  add   r14                                 ; $098B91 |/  address of method 01 sprite info
+  iwt   r0,#$1001                           ; $098B92 |\
+  add   r10                                 ; $098B95 | | OAM buffer byte count
+  ldb   (r0)                                ; $098B96 | | mask off first three bits
+  iwt   r8,#$00F8                           ; $098B98 | | (pointlessly, they get shifted
+  and   r8                                  ; $098B9B |/  off anyway)
 
-CODE_098BF7:
-  dec   r0                                  ; $098BF7 | the OAM priority
-  sms   ($004E),r0                          ; $098BF8 | store either one in (004E)
-  iwt   r0,#$1640                           ; $098BFB |
-  add   r10                                 ; $098BFE | r1 = OAM x
-  to r1                                     ; $098BFF |
-  ldw   (r0)                                ; $098C00 |
-  inc   r0                                  ; $098C01 |
-  inc   r0                                  ; $098C02 |
-  to r2                                     ; $098C03 |
-  ldw   (r0)                                ; $098C04 | r2 = OAM y
-  move  r10,r13                             ; $098C05 | preserve low x coord byte
-  move  r13,r15                             ; $098C07 | begin loop here
-  getbs                                     ; $098C09 | t[0] = byte 1 of ROM table
-  inc   r14                                 ; $098C0B | for current anim frame
-  iwt   r9,#$4000                           ; $098C0C | t[0] = x drawing offset
-  with r9                                   ; $098C0F |
-  and   r3                                  ; $098C10 |
-  beq CODE_098C18                           ; $098C11 | test x flip
-  nop                                       ; $098C13 | negate if needed
-  not                                       ; $098C14 |
-  inc   r0                                  ; $098C15 |
-  ibt   r9,#$0008                           ; $098C16 |
+..prep_loop
+  lsr                                       ; $098B9C |\  / 8
+  lsr                                       ; $098B9D | | # of OAM entries this sprite has
+  lsr                                       ; $098B9E | | -> size of method_01_loop
+  move  r12,r0                              ; $098B9F |/
+  to r8                                     ; $098BA1 |\
+  getb                                      ; $098BA2 | | [method_01_data]
+  inc   r14                                 ; $098BA3 | | read from method_01_pointer
+  umult #5                                  ; $098BA4 | | r14 = word($1A848A,ID)
+  umult r9                                  ; $098BA6 | | + entry count * 5 * anim frame
+  with r8                                   ; $098BA8 | | sets up ROM address to begin
+  getbh                                     ; $098BA9 | | reading for method 01 OAM data
+  to r14                                    ; $098BAB | |
+  add   r8                                  ; $098BAC |/
+  sms   ($0042),r1                          ; $098BAD |\
+  sms   ($0044),r2                          ; $098BB0 | | preserve both draw & priority
+  sms   ($0054),r10                         ; $098BB3 | | loop registers
+  sms   ($005A),r13                         ; $098BB6 |/
+  iwt   r0,#.next_sprite_draw               ; $098BB9 |\ sprite_draw_loop
+  sms   ($0060),r0                          ; $098BBC |/ continue address
+  iwt   r0,#$1002                           ; $098BBF |\
+  add   r10                                 ; $098BC2 | | r3 = 1002,x (OAM low)
+  to r3                                     ; $098BC3 | | 0000ccc0
+  ldb   (r0)                                ; $098BC4 |/  this only gets palette for now
+  iwt   r0,#$13C0                           ; $098BC6 |\
+  add   r10                                 ; $098BC9 | | [sprite_OAM_low]
+  ldb   (r0)                                ; $098BCA | | facing dir to get x/y flip
+  add   r0                                  ; $098BCC | | (00000yx0)
+  add   r0                                  ; $098BCD | | << 5
+  mult  #8                                  ; $098BCE | | to shift as yx00000
+  xor   r3                                  ; $098BD0 | | ^ 1002,x swap:
+  to r3                                     ; $098BD2 | | r3 = yx--ccc- 00000000
+  swap                                      ; $098BD3 |/
+  lms   r4,($0092)                          ; $098BD4 |\
+  iwt   r0,#$1322                           ; $098BD7 | | set sprite's OAM
+  add   r10                                 ; $098BDA | | pointer to this entry
+  from r4                                   ; $098BDB | | (1322,x)
+  stw   (r0)                                ; $098BDC |/
+  iwt   r0,#$10A0                           ; $098BDD |\  [sprite_priority_override]
+  add   r10                                 ; $098BE0 | | r13 = low x coord byte
+  ldb   (r0)                                ; $098BE1 | | sprite priority override
+  to r13                                    ; $098BE3 | | -p------ 00000000
+  swap                                      ; $098BE4 |/
+  ibt   r0,#$003C                           ; $098BE5 |\
+  sub   r10                                 ; $098BE7 | | if sprite slot <= 3C
+  bcs ..prep_OAM_coords                     ; $098BE8 | | ambient sprite
+  sub   r0                                  ; $098BEA |/
+  iwt   r0,#$1D56                           ; $098BEB |\  or if 1D56,x - 1 < 0
+  add   r10                                 ; $098BEE | | meaning no collision
+  ldw   (r0)                                ; $098BEF | | with other sprites
+  dec   r0                                  ; $098BF0 | | then r0 = $FFFF
+  bmi ..prep_OAM_coords                     ; $098BF1 |/
+  sub   r0                                  ; $098BF3 |\  else r0 = $F1FF
+  iwt   r0,#$F200                           ; $098BF4 |/  this is for bitmasking palette
 
-CODE_098C18:
-  to r5                                     ; $098C18 |
-  add   r1                                  ; $098C19 | r5 = OAM x +/- t[0]
-  getbs                                     ; $098C1A | t[1] = y drawing offset
-  inc   r14                                 ; $098C1C |
-  ibt   r8,#$0000                           ; $098C1D |
-  moves r3,r3                               ; $098C1F | test y flip
-  bpl CODE_098C28                           ; $098C21 | negate if needed
-  nop                                       ; $098C23 |
-  not                                       ; $098C24 |
-  inc   r0                                  ; $098C25 |
-  ibt   r8,#$0008                           ; $098C26 |
+..prep_OAM_coords
+  dec   r0                                  ; $098BF7 |\ [palette_bitmask]
+  sms   ($004E),r0                          ; $098BF8 |/ -> ($004E)
+  iwt   r0,#$1640                           ; $098BFB |\
+  add   r10                                 ; $098BFE | | [sprite_OAM_X]
+  to r1                                     ; $098BFF | | r1 = OAM x (screen rel)
+  ldw   (r0)                                ; $098C00 |/
+  inc   r0                                  ; $098C01 |\
+  inc   r0                                  ; $098C02 | | [sprite_OAM_Y]
+  to r2                                     ; $098C03 | | r2 = OAM y (screen rel)
+  ldw   (r0)                                ; $098C04 |/
+  move  r10,r13                             ; $098C05 | r10 = sprite_priority_override
+  move  r13,r15                             ; $098C07 | begin method_01_loop
 
-CODE_098C28:
-  to r6                                     ; $098C28 |
-  add   r2                                  ; $098C29 | r6 = OAM y +/- t[1]
-  getb                                      ; $098C2A |
-  inc   r14                                 ; $098C2B |
-  lms   r7,($004E)                          ; $098C2C | F1FF or FFFF
-  getbh                                     ; $098C2F |
-  inc   r14                                 ; $098C31 | word t[2] (includes t[3])
-  and   r7                                  ; $098C32 |
-  to r7                                     ; $098C33 |
-  xor   r3                                  ; $098C34 | r7 = oam low bytes 3 & 4
-  getb                                      ; $098C36 |
-  and   #2                                  ; $098C37 | mask for size flag
-  bne CODE_098C40                           ; $098C39 |
-  nop                                       ; $098C3B |
-  with r5                                   ; $098C3C |
-  add   r9                                  ; $098C3D | size corrections to X/Y if
-  with r6                                   ; $098C3E |
-  add   r8                                  ; $098C3F | size flag not set
+; loop through each OAM entry
+; of this current animation frame
+; of this current sprite
+; for drawing method 01
+..method_01_loop
+  getbs                                     ; $098C09 |\ [draw_offset_X]
+  inc   r14                                 ; $098C0B |/ byte 1 from method_01_data
+  iwt   r9,#$4000                           ; $098C0C |\
+  with r9                                   ; $098C0F | | [size_correction_X]
+  and   r3                                  ; $098C10 | | is x flip on?
+  beq ..check_Y_flip                        ; $098C11 | | if so, negate draw_offset_X
+  nop                                       ; $098C13 | | and set r9 = $0008
+  not                                       ; $098C14 | |
+  inc   r0                                  ; $098C15 | | else r9 = $0000
+  ibt   r9,#$0008                           ; $098C16 |/
 
-CODE_098C40:
-  getbh                                     ; $098C40 | t[4] = OAM high table
-  inc   r14                                 ; $098C42 | just for size
-  from r5                                   ; $098C43 |
-  stw   (r4)                                ; $098C44 | store OAM x coord
-  inc   r4                                  ; $098C45 |
-  inc   r4                                  ; $098C46 |
-  to r5                                     ; $098C47 |
-  xor   r10                                 ; $098C48 | r5 = size ^ low x byte
-  from r6                                   ; $098C4A |
-  stw   (r4)                                ; $098C4B | store OAM y coord
-  inc   r4                                  ; $098C4C |
-  inc   r4                                  ; $098C4D |
-  lms   r0,($0000)                          ; $098C4E |
-  add   r7                                  ; $098C51 |
-  stw   (r4)                                ; $098C52 | store OAM 3 & 4
-  inc   r4                                  ; $098C53 |
-  inc   r4                                  ; $098C54 |
-  from r5                                   ; $098C55 |
-  stw   (r4)                                ; $098C56 | store high table info
-  inc   r4                                  ; $098C57 | size & ms x byte together
-  loop                                      ; $098C58 |
-  inc   r4                                  ; $098C59 |
+..check_Y_flip
+  to r5                                     ; $098C18 |\ [spr_OAM_offsetted_X]
+  add   r1                                  ; $098C19 |/ r5 = sprite_OAM_X +/- draw_offset_X
+  getbs                                     ; $098C1A |\ [draw_offset_Y]
+  inc   r14                                 ; $098C1C |/ byte 2 from method_01_data
+  ibt   r8,#$0000                           ; $098C1D |\
+  moves r3,r3                               ; $098C1F | | [size_correction_Y]
+  bpl ..compute_OAM                         ; $098C21 | | is y flip on?
+  nop                                       ; $098C23 | | if so, negate draw_offset_Y
+  not                                       ; $098C24 | | and set r8 = $0008
+  inc   r0                                  ; $098C25 | | else r8 = $0000
+  ibt   r8,#$0008                           ; $098C26 |/
+
+..compute_OAM
+  to r6                                     ; $098C28 |\ [spr_OAM_offsetted_Y]
+  add   r2                                  ; $098C29 |/ r6 = OAM y +/- draw_offset_Y
+  getb                                      ; $098C2A |\  [OAM_3_4]
+  inc   r14                                 ; $098C2B | | palette & tile # from method_01_data
+  lms   r7,($004E)                          ; $098C2C | | & palette_bitmask (keep or not)
+  getbh                                     ; $098C2F | | ^ sprite_OAM_low
+  inc   r14                                 ; $098C31 | | copies in x/y flip and possibly palette
+  and   r7                                  ; $098C32 | | r7 = the full yx--ccct tttttttt
+  to r7                                     ; $098C33 | | OAM 3 & 4 bytes
+  xor   r3                                  ; $098C34 |/
+  getb                                      ; $098C36 |\
+  and   #2                                  ; $098C37 | | method_01_data byte 5
+  bne ..store_OAM                           ; $098C39 | | is size flag set?
+  nop                                       ; $098C3B |/
+  with r5                                   ; $098C3C |\
+  add   r9                                  ; $098C3D | | if not, do size corrections:
+  with r6                                   ; $098C3E | | spr_OAM_offsetted_X += size_correction_X
+  add   r8                                  ; $098C3F |/  spr_OAM_offsetted_Y += size_correction_Y
+
+..store_OAM
+  getbh                                     ; $098C40 |\ read byte 5 again but just
+  inc   r14                                 ; $098C42 |/ for size in high byte
+  from r5                                   ; $098C43 |\
+  stw   (r4)                                ; $098C44 | | store spr_OAM_offsetted_X
+  inc   r4                                  ; $098C45 |/  -> word 1 in OAM buffer entry
+  inc   r4                                  ; $098C46 |\  [OAM_buffer_word_4]
+  to r5                                     ; $098C47 | | sprite_priority_override ^ size
+  xor   r10                                 ; $098C48 |/  r5 = -p----s- 00000000
+  from r6                                   ; $098C4A |\
+  stw   (r4)                                ; $098C4B | | store spr_OAM_offsetted_Y
+  inc   r4                                  ; $098C4C | | -> word 2 in OAM buffer entry
+  inc   r4                                  ; $098C4D |/
+  lms   r0,($0000)                          ; $098C4E |\  store OAM_3_4
+  add   r7                                  ; $098C51 | | + OBJ_tile_index
+  stw   (r4)                                ; $098C52 | |
+  inc   r4                                  ; $098C53 | | -> word 3 in OAM buffer entry
+  inc   r4                                  ; $098C54 |/
+  from r5                                   ; $098C55 |\
+  stw   (r4)                                ; $098C56 | | store OAM_buffer_word_4
+  inc   r4                                  ; $098C57 |/  -> word 4 in OAM buffer entry
+  loop                                      ; $098C58 |\ next OAM entry
+  inc   r4                                  ; $098C59 |/ end method_01_loop
   sms   ($0092),r4                          ; $098C5A | store next free OAM slot
-  lms   r1,($0042)                          ; $098C5D |
-  lms   r2,($0044)                          ; $098C60 |
-  lms   r10,($0054)                         ; $098C63 | restore registers
-  lms   r12,($0058)                         ; $098C66 | to get back to more sprites!
-  lms   r13,($005A)                         ; $098C69 |
-  lms   r15,($0060)                         ; $098C6C |
-  nop                                       ; $098C6F |
+  lms   r1,($0042)                          ; $098C5D |\
+  lms   r2,($0044)                          ; $098C60 | |
+  lms   r10,($0054)                         ; $098C63 | | restore registers
+  lms   r12,($0058)                         ; $098C66 | | to get back to more sprites!
+  lms   r13,($005A)                         ; $098C69 | |
+  lms   r15,($0060)                         ; $098C6C | | continue sprite_draw_loop
+  nop                                       ; $098C6F |/
 
 ; 02 drawing method
-; this seems to not really do anything?
-; used for not drawing a sprite?
+; all this really does is allocate
+; OAM bytes, based on $1001,x
+; probably for sprites that hardcode their own OAM
+.drawing_method_02
   ; iwt r0,#1001
-  dw $1001                                  ; $098C70 |
-  add   r10                                 ; $098C72 | OAM buffer byte count
-  ldw   (r0)                                ; $098C73 |
-  iwt   r7,#$00F8                           ; $098C74 |
-  and   r7                                  ; $098C77 |
-  lms   r8,($0092)                          ; $098C78 | next free slot
-  add   r8                                  ; $098C7B | add the byte count
-  sbk                                       ; $098C7C | update
-  iwt   r0,#$1322                           ; $098C7D |
-  add   r10                                 ; $098C80 | set 1322,x with
-  from r8                                   ; $098C81 |
-  stw   (r0)                                ; $098C82 | buffer entry
-  iwt   r15,#$8AE5                          ; $098C83 | go to next sprite
-  inc   r10                                 ; $098C86 |
+  dw $1001                                  ; $098C70 |\
+  add   r10                                 ; $098C72 | | OAM buffer byte count
+  ldw   (r0)                                ; $098C73 | | mask off first three bits
+  iwt   r7,#$00F8                           ; $098C74 | |
+  and   r7                                  ; $098C77 |/
+  lms   r8,($0092)                          ; $098C78 |\  next OAM free slot
+  add   r8                                  ; $098C7B | | allocate this many bytes
+  sbk                                       ; $098C7C |/
+  iwt   r0,#$1322                           ; $098C7D |\
+  add   r10                                 ; $098C80 | | OAM buffer pointer
+  from r8                                   ; $098C81 | | -> sprite's 1322,x
+  stw   (r0)                                ; $098C82 |/
+  iwt   r15,#.next_sprite_draw+1            ; $098C83 |\ go to next sprite
+  inc   r10                                 ; $098C86 |/
 
 ; 8C83 in code (indexed by 4's, pairs of words)
 ; x, y thresholds for despawning sprites
+.despawn_thresholds
   dw $0060, $0060                           ; $098C87 |
   dw $0090, $0060                           ; $098C8B |
   dw $0090, $00A0                           ; $098C8F |
 
 ; 03 drawing method
-; this is the same as 01 except OAM byte count
-; MSB flagged on - if it's greater than a byte
-; use this index
-                     ; sms   (0058),r12
+; this is the same as 01 except
+; just adds on 32 more entries
+; into the buffer as free OAM
+; probably for hardcoded OAM
+; mixed with regular OAM
+.drawing_method_03
+  ; sms   (0058),r12
   db $AC, $2C                               ; $098C93 | preserve outer loop counter
-  iwt   r0,#$1320                           ; $098C95 |
-  add   r10                                 ; $098C98 | sprite ID
-  ldw   (r0)                                ; $098C99 |
-  add   r0                                  ; $098C9A | * 2
-  iwt   r14,#$048A                          ; $098C9B |
-  to r14                                    ; $098C9E |
-  add   r14                                 ; $098C9F | $1A848A[ID]
-  iwt   r0,#$1001                           ; $098CA0 | OAM byte count
-  add   r10                                 ; $098CA3 |
-  ldb   (r0)                                ; $098CA4 |
-  iwt   r8,#$00F8                           ; $098CA6 |
-  and   r8                                  ; $098CA9 |
-  iwt   r8,#$0100                           ; $098CAA | adds 256 to OAM byte count
-  iwt   r15,#$8B9C                          ; $098CAD | giving it 32 more entries
-  add   r8                                  ; $098CB0 | then jump to OAM processing
+  iwt   r0,#$1320                           ; $098C95 |\
+  add   r10                                 ; $098C98 | | sprite ID
+  ldw   (r0)                                ; $098C99 | |
+  add   r0                                  ; $098C9A | | * 2
+  iwt   r14,#$048A                          ; $098C9B | |
+  to r14                                    ; $098C9E | | method_01_pointer = 1A848A,ID*2
+  add   r14                                 ; $098C9F |/
+  iwt   r0,#$1001                           ; $098CA0 |\
+  add   r10                                 ; $098CA3 | | OAM buffer byte count
+  ldb   (r0)                                ; $098CA4 | | mask off first three bits
+  iwt   r8,#$00F8                           ; $098CA6 | |
+  and   r8                                  ; $098CA9 |/
+  iwt   r8,#$0100                           ; $098CAA |\  finish all the rest in method 01 code
+  iwt   r15,#.drawing_method_01_prep_loop   ; $098CAD | | adds 256 to OAM byte count
+  add   r8                                  ; $098CB0 |/  giving it 32 more entries of "free" OAM
+; end gsu_edge_despawn_draw
 
 ; gsu routine
   romb                                      ; $098CB1 |
@@ -4490,11 +4626,11 @@ gsu_update_camera:
   add   r6                                  ; $0997AA |/
   ldb   (r0)                                ; $0997AB |\
   sex                                       ; $0997AD | | screen ID for lower right screen #
-  bmi CODE_0997B2                           ; $0997AE | | negative means empty
+  bmi .check_empty_screen_values            ; $0997AE | | negative means empty
   nop                                       ; $0997B0 |/
   inc   r5                                  ; $0997B1 | if not empty, r5++
 
-CODE_0997B2:
+.check_empty_screen_values
   ibt   r0,#$0009                           ; $0997B2 |\
   romb                                      ; $0997B4 | |
   iwt   r0,#$94A7                           ; $0997B6 | | index into empty_screen_values table
@@ -8225,6 +8361,10 @@ CODE_09AF3D:
   stop                                      ; $09AF48 |
   nop                                       ; $09AF49 |
 
+; bonus item routine
+; loops through all current sprites and checks if
+; any sprites with flags #$6000 set at $0FA2 table
+; result returned with r11, $00 if ememy found, $FF if not
   cache                                     ; $09AF4A |
   iwt   r1,#$0F00                           ; $09AF4B |
   iwt   r2,#$0FA2                           ; $09AF4E |

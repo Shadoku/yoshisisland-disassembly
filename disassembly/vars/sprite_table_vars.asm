@@ -66,8 +66,8 @@
 !s_spr_x_player_dir = $77C2
 !s_spr_y_player_dir = $77C3
 
-; !s_spr_unknown_bits = $701860
-; !s_spr_unknown_bits = $701862
+; !s_spr_unknown_bits = $7860
+; !s_spr_unknown_bits = $7862
 
 !s_spr_wildcard_1_lo = $7900
 !s_spr_wildcard_1_hi = $7901
@@ -79,7 +79,51 @@
 !s_spr_wildcard_4_lo = $7978
 !s_spr_wildcard_4_hi = $7979
 
-; s_spr_wildcard_3_lo_dp = $76
+!s_spr_wildcard_3_lo_dp = $16
+!s_spr_wildcard_3_hi_dp = $17
+!s_spr_wildcard_4_lo_dp = $18
+!s_spr_wildcard_4_hi_dp = $19
 
-; !s_spr_
-; !s_spr_
+!s_spr_wildcard_5_lo = $79D6
+!s_spr_wildcard_5_hi = $79D7
+!s_spr_wildcard_6_lo = $79D8
+!s_spr_wildcard_6_hi = $79D9
+
+!s_spr_wildcard_5_lo_dp = $76
+!s_spr_wildcard_5_hi_dp = $77
+!s_spr_wildcard_6_lo_dp = $78
+!s_spr_wildcard_6_hi_dp = $79
+
+!s_spr_gsu_morph_1_lo = $7A36
+!s_spr_gsu_morph_1_hi = $7A37
+!s_spr_gsu_morph_2_lo = $7A38
+!s_spr_gsu_morph_2_hi = $7A39
+
+!s_spr_timer_1 = $7A96
+!s_spr_timer_2 = $7A98
+
+!s_spr_timer_3 = $7AF6
+!s_spr_timer_4 = $7AF8
+
+!s_spr_x_hitbox_offset = $7B56
+!s_spr_y_hitbox_offset = $7B58
+
+!s_spr_hitbox_width = $7BB6
+!s_spr_hitbox_height = $7BB8
+
+!s_spr_x_player_delta = $7C16
+!s_spr_y_player_delta = $7C18
+
+!s_spr_x_collision_delta = $7C76
+!s_spr_y_collision_delta = $7C78
+
+!s_spr_x_hitbox_center = $7CD6
+!s_spr_y_hitbox_center = $7CD8
+
+!s_spr_collision_id = $7D36
+; !s_spr_collision_???? = $7D37
+!s_spr_collision_state = $7D38
+; !s_spr_collision_??? = $7D39
+
+!s_spr_timer_frozen = $7D96
+; !s_spr_empty = $701D96

@@ -56,7 +56,7 @@ CODE_08801A:
   sms   ($004C),r6                          ; $088046 |
   ibt   r0,#$0008                           ; $088049 |
   romb                                      ; $08804B |
-  iwt   r0,#$AE18                           ; $08804D |
+  iwt   r0,#cosine_8                        ; $08804D |
   to r14                                    ; $088050 |
   add   r1                                  ; $088051 |
   to r4                                     ; $088052 |
@@ -69,7 +69,7 @@ CODE_08801A:
   add   r3                                  ; $088059 |
   to r8                                     ; $08805A |
   getb                                      ; $08805B |
-  iwt   r0,#$AE58                           ; $08805C |
+  iwt   r0,#sine_8                          ; $08805C |
   to r14                                    ; $08805F |
   add   r1                                  ; $088060 |
   to r5                                     ; $088061 |
@@ -427,7 +427,7 @@ CODE_0881F5:
   add   r5                                  ; $08820F |
   ibt   r0,#$0008                           ; $088210 |
   romb                                      ; $088212 |
-  iwt   r0,#$AB98                           ; $088214 |
+  iwt   r0,#cosine_16                       ; $088214 |
   to r14                                    ; $088217 |
   add   r5                                  ; $088218 |
   getb                                      ; $088219 |
@@ -447,7 +447,7 @@ CODE_0881F5:
   add   r0                                  ; $08822A |
   to r11                                    ; $08822B |
   add   r0                                  ; $08822C |
-  iwt   r0,#$AC18                           ; $08822D |
+  iwt   r0,#sine_16                         ; $08822D |
   to r14                                    ; $088230 |
   add   r5                                  ; $088231 |
   getb                                      ; $088232 |
@@ -717,7 +717,7 @@ CODE_088356:
   add   r5                                  ; $088369 |
   ibt   r0,#$0008                           ; $08836A |
   romb                                      ; $08836C |
-  iwt   r0,#$AB98                           ; $08836E |
+  iwt   r0,#cosine_16                       ; $08836E |
   to r14                                    ; $088371 |
   add   r5                                  ; $088372 |
   getb                                      ; $088373 |
@@ -737,7 +737,7 @@ CODE_088356:
   add   r0                                  ; $088384 |
   to r11                                    ; $088385 |
   add   r0                                  ; $088386 |
-  iwt   r0,#$AC18                           ; $088387 |
+  iwt   r0,#sine_16                         ; $088387 |
   to r14                                    ; $08838A |
   add   r5                                  ; $08838B |
   getb                                      ; $08838C |
@@ -841,7 +841,7 @@ CODE_0883E2:
   add   r5                                  ; $0883FD |
   ibt   r0,#$0008                           ; $0883FE |
   romb                                      ; $088400 |
-  iwt   r0,#$AB98                           ; $088402 |
+  iwt   r0,#cosine_16                       ; $088402 |
   to r14                                    ; $088405 |
   add   r5                                  ; $088406 |
   getb                                      ; $088407 |
@@ -866,7 +866,7 @@ CODE_0883E2:
   to r8                                     ; $088420 |
   or    r4                                  ; $088421 |
   sms   ($0000),r8                          ; $088422 |
-  iwt   r0,#$AC18                           ; $088425 |
+  iwt   r0,#sine_16                         ; $088425 |
   to r14                                    ; $088428 |
   add   r5                                  ; $088429 |
   getb                                      ; $08842A |
@@ -986,7 +986,7 @@ CODE_088493:
   add   r5                                  ; $0884B5 |\
   ibt   r0,#$0008                           ; $0884B6 | |
   romb                                      ; $0884B8 | |
-  iwt   r0,#$AB98                           ; $0884BA | | 16-bit cosine
+  iwt   r0,#cosine_16                       ; $0884BA | | 16-bit cosine
   to r14                                    ; $0884BD | |
   add   r5                                  ; $0884BE | | r5 * 2 is angle
   getb                                      ; $0884BF | |
@@ -1011,7 +1011,7 @@ CODE_088493:
   to r8                                     ; $0884D8 | |
   or    r4                                  ; $0884D9 |/
   sms   ($0000),r8                          ; $0884DA | column y step value
-  iwt   r0,#$AC18                           ; $0884DD |\
+  iwt   r0,#sine_16                         ; $0884DD |\
   to r14                                    ; $0884E0 | |
   add   r5                                  ; $0884E1 | |
   getb                                      ; $0884E2 | |
@@ -1104,10 +1104,10 @@ CODE_088545:
 
 CODE_08854D:
   lms   r0,($0002)                          ; $08854D |\
-  to r10                                    ; $088550 |
+  to r10                                    ; $088550 | |
   add   r10                                 ; $088551 | | outer loop steps
   lms   r0,($0000)                          ; $088552 | | "next row" step values for x & y
-  to r11                                    ; $088555 |
+  to r11                                    ; $088555 | |
   add   r11                                 ; $088556 |/
   dec   r4                                  ; $088557 |\ loop counter
   bne CODE_08852C                           ; $088558 |/ end entire loop on 0
@@ -1133,7 +1133,7 @@ CODE_08854D:
   add   r5                                  ; $08856F |\
   ibt   r0,#$0008                           ; $088570 | |
   romb                                      ; $088572 | |
-  iwt   r0,#$AB98                           ; $088574 | | 16-bit cosine
+  iwt   r0,#cosine_16                       ; $088574 | | 16-bit cosine
   to r14                                    ; $088577 |
   add   r5                                  ; $088578 | | r5 * 2 is angle
   getb                                      ; $088579 | |
@@ -1158,7 +1158,7 @@ CODE_08854D:
   to r8                                     ; $088592 |
   or    r4                                  ; $088593 |
   sms   ($0000),r8                          ; $088594 |
-  iwt   r0,#$AC18                           ; $088597 |
+  iwt   r0,#sine_16                         ; $088597 |
   to r14                                    ; $08859A |
   add   r5                                  ; $08859B |
   getb                                      ; $08859C |
@@ -1359,7 +1359,7 @@ CODE_088675:
   add   r5                                  ; $088688 |
   ibt   r0,#$0008                           ; $088689 |
   romb                                      ; $08868B |
-  iwt   r0,#$AB98                           ; $08868D |
+  iwt   r0,#cosine_16                       ; $08868D |
   to r14                                    ; $088690 |
   add   r5                                  ; $088691 |
   getb                                      ; $088692 |
@@ -1378,7 +1378,7 @@ CODE_088675:
   add   r0                                  ; $0886A2 |
   to r11                                    ; $0886A3 |
   add   r0                                  ; $0886A4 |
-  iwt   r0,#$AC18                           ; $0886A5 |
+  iwt   r0,#sine_16                         ; $0886A5 |
   to r14                                    ; $0886A8 |
   add   r5                                  ; $0886A9 |
   getb                                      ; $0886AA |
@@ -1573,7 +1573,7 @@ CODE_088768:
   add   r5                                  ; $088788 |
   ibt   r0,#$0008                           ; $088789 |
   romb                                      ; $08878B |
-  iwt   r0,#$AB98                           ; $08878D |
+  iwt   r0,#cosine_16                       ; $08878D |
   to r14                                    ; $088790 |
   add   r5                                  ; $088791 |
   getb                                      ; $088792 |
@@ -1594,7 +1594,7 @@ CODE_088768:
   add   r0                                  ; $0887A4 |
   to r11                                    ; $0887A5 |
   add   r0                                  ; $0887A6 |
-  iwt   r0,#$AC18                           ; $0887A7 |
+  iwt   r0,#sine_16                         ; $0887A7 |
   to r14                                    ; $0887AA |
   add   r5                                  ; $0887AB |
   getb                                      ; $0887AC |
@@ -1703,7 +1703,7 @@ CODE_088803:
   add   r5                                  ; $088826 |
   ibt   r0,#$0008                           ; $088827 |
   romb                                      ; $088829 |
-  iwt   r0,#$AB98                           ; $08882B |
+  iwt   r0,#cosine_16                       ; $08882B |
   to r14                                    ; $08882E |
   add   r5                                  ; $08882F |
   getb                                      ; $088830 |
@@ -1724,7 +1724,7 @@ CODE_088803:
   add   r0                                  ; $088842 |
   to r11                                    ; $088843 |
   add   r0                                  ; $088844 |
-  iwt   r0,#$AC18                           ; $088845 |
+  iwt   r0,#sine_16                         ; $088845 |
   to r14                                    ; $088848 |
   add   r5                                  ; $088849 |
   getb                                      ; $08884A |
@@ -1818,7 +1818,7 @@ CODE_0888A1:
   add   r5                                  ; $0888AF |
   ibt   r0,#$0008                           ; $0888B0 |
   romb                                      ; $0888B2 |
-  iwt   r0,#$AB98                           ; $0888B4 |
+  iwt   r0,#cosine_16                       ; $0888B4 |
   to r14                                    ; $0888B7 |
   add   r5                                  ; $0888B8 |
   getb                                      ; $0888B9 |
@@ -1840,7 +1840,7 @@ CODE_0888A1:
   add   r0                                  ; $0888CC |
   to r11                                    ; $0888CD |
   add   r0                                  ; $0888CE |
-  iwt   r0,#$AC18                           ; $0888CF |
+  iwt   r0,#sine_16                         ; $0888CF |
   to r14                                    ; $0888D2 |
   add   r5                                  ; $0888D3 |
   getb                                      ; $0888D4 |
@@ -1956,7 +1956,7 @@ CODE_08892C:
   add   r5                                  ; $088955 |
   ibt   r0,#$0008                           ; $088956 |
   romb                                      ; $088958 |
-  iwt   r0,#$AB98                           ; $08895A |
+  iwt   r0,#cosine_16                       ; $08895A |
   to r14                                    ; $08895D |
   add   r5                                  ; $08895E |
   getb                                      ; $08895F |
@@ -1981,7 +1981,7 @@ CODE_08892C:
   to r8                                     ; $088978 |
   or    r4                                  ; $088979 |
   sms   ($0000),r8                          ; $08897A |
-  iwt   r0,#$AC18                           ; $08897D |
+  iwt   r0,#sine_16                         ; $08897D |
   to r14                                    ; $088980 |
   add   r5                                  ; $088981 |
   getb                                      ; $088982 |
@@ -2207,7 +2207,7 @@ CODE_088A6D:
   ldw   (r0)                                ; $088A8D |
   ibt   r0,#$0008                           ; $088A8E |
   romb                                      ; $088A90 |
-  iwt   r0,#$AB98                           ; $088A92 |
+  iwt   r0,#cosine_16                       ; $088A92 |
   to r14                                    ; $088A95 |
   add   r5                                  ; $088A96 |
   getb                                      ; $088A97 |
@@ -2233,7 +2233,7 @@ CODE_088A6D:
   to r8                                     ; $088AB3 |
   or    r4                                  ; $088AB4 |
   sms   ($0000),r8                          ; $088AB5 |
-  iwt   r0,#$AC18                           ; $088AB8 |
+  iwt   r0,#sine_16                         ; $088AB8 |
   to r14                                    ; $088ABB |
   add   r5                                  ; $088ABC |
   getb                                      ; $088ABD |
@@ -2362,7 +2362,7 @@ CODE_088B35:
   add   r5                                  ; $088B59 |
   ibt   r0,#$0008                           ; $088B5A |
   romb                                      ; $088B5C |
-  iwt   r0,#$AB98                           ; $088B5E |
+  iwt   r0,#cosine_16                       ; $088B5E |
   to r14                                    ; $088B61 |
   add   r5                                  ; $088B62 |
   getb                                      ; $088B63 |
@@ -2387,7 +2387,7 @@ CODE_088B35:
   to r8                                     ; $088B7C |
   or    r4                                  ; $088B7D |
   sms   ($0000),r8                          ; $088B7E |
-  iwt   r0,#$AC18                           ; $088B81 |
+  iwt   r0,#sine_16                         ; $088B81 |
   to r14                                    ; $088B84 |
   add   r5                                  ; $088B85 |
   getb                                      ; $088B86 |
@@ -3148,7 +3148,7 @@ CODE_088E44:
   iwt   r5,#$FF00                           ; $088F02 |
   iwt   r6,#$3A02                           ; $088F05 |
   ibt   r7,#$0004                           ; $088F08 |
-  iwt   r8,#$AE18                           ; $088F0A |
+  iwt   r8,#cosine_8                        ; $088F0A |
   ibt   r9,#$0000                           ; $088F0D |
   move  r14,r8                              ; $088F0F |
   getb                                      ; $088F11 |
@@ -3242,7 +3242,7 @@ CODE_088F6F:
   hib                                       ; $088F84 |
   ibt   r0,#$0008                           ; $088F85 |
   romb                                      ; $088F87 |
-  iwt   r14,#$AE58                          ; $088F89 |
+  iwt   r14,#sine_8                         ; $088F89 |
   with r14                                  ; $088F8C |
   add   r11                                 ; $088F8D |
   getbs                                     ; $088F8E |
@@ -3311,7 +3311,7 @@ CODE_088FCE:
   asr                                       ; $088FDB |
   from r1                                   ; $088FDC |
   add   r0                                  ; $088FDD |
-  iwt   r14,#$AE58                          ; $088FDE |
+  iwt   r14,#sine_8                         ; $088FDE |
   to r14                                    ; $088FE1 |
   add   r14                                 ; $088FE2 |
   getbs                                     ; $088FE3 |
@@ -3533,130 +3533,144 @@ CODE_0890E3:
   stop                                      ; $0890E5 |
   nop                                       ; $0890E6 |
 
-  romb                                      ; $0890E7 |
-  move  r14,r1                              ; $0890E9 |
-  getb                                      ; $0890EB |
-  inc   r14                                 ; $0890EC |
-  getbh                                     ; $0890ED |
-  inc   r14                                 ; $0890EF |
-  ibt   r10,#$001F                          ; $0890F0 |
-  to r3                                     ; $0890F2 |
-  and   r10                                 ; $0890F3 |
-  lsr                                       ; $0890F4 |
-  lsr                                       ; $0890F5 |
-  lsr                                       ; $0890F6 |
-  lsr                                       ; $0890F7 |
-  lsr                                       ; $0890F8 |
-  to r4                                     ; $0890F9 |
-  and   r10                                 ; $0890FA |
-  lsr                                       ; $0890FB |
-  lsr                                       ; $0890FC |
-  lsr                                       ; $0890FD |
-  lsr                                       ; $0890FE |
-  lsr                                       ; $0890FF |
-  to r5                                     ; $089100 |
-  and   r10                                 ; $089101 |
-  iwt   r1,#$5D21                           ; $089102 |
-  iwt   r2,#$59B5                           ; $089105 |
-  iwt   r13,#$9135                          ; $089108 |
-  ibt   r11,#$0017                          ; $08910B |
+; r0 = [palette bank]
+; r1 = [palette pointer]
+; Note: Colors table is stored from bottom to top
+;       Destination buffer pointers are from end of table
+; color table format = 0BBBBBGG GGGRRRRR
+; result gradient format: bgrccccc - b/g/r = color channel - c = intensity
+gsu_draw_bg_gradient:
+  romb                                      ; $0890E7 | Set ROM bank for palettes
+  move  r14,r1                              ; $0890E9 | Set ROM pointer
+  getb                                      ; $0890EB |\
+  inc   r14                                 ; $0890EC | | r0 = [first color entry]
+  getbh                                     ; $0890ED | |
+  inc   r14                                 ; $0890EF |/
+  ibt   r10,#$001F                          ; $0890F0 |\  Color bitmask
+  to r3                                     ; $0890F2 | | r3 = [masked red color]
+  and   r10                                 ; $0890F3 |/
+  lsr                                       ; $0890F4 |\
+  lsr                                       ; $0890F5 | |
+  lsr                                       ; $0890F6 | | Shift down to next color
+  lsr                                       ; $0890F7 | |
+  lsr                                       ; $0890F8 | |
+  to r4                                     ; $0890F9 | | r4 = [masked green color]
+  and   r10                                 ; $0890FA |/
+  lsr                                       ; $0890FB |\
+  lsr                                       ; $0890FC | |
+  lsr                                       ; $0890FD | | Shift down to next color
+  lsr                                       ; $0890FE | |
+  lsr                                       ; $0890FF | |
+  to r5                                     ; $089100 | | r5 = [masked blue color]
+  and   r10                                 ; $089101 |/
+  iwt   r1,#$5D21                           ; $089102 | r1 = Green & Red gradient buffer
+  iwt   r2,#$59B5                           ; $089105 | r2 = Blue gradient buffer
+  iwt   r13,#$9135                          ; $089108 | loop point
+  ibt   r11,#$0017                          ; $08910B | Number of Gradient color points
   cache                                     ; $08910D |
-  getb                                      ; $08910E |
-
-CODE_08910F:
+  getb                                      ; $08910E | r0 = [next color low]
+.get_next_diff
   inc   r14                                 ; $08910F |
-  move  r6,r0                               ; $089110 |
-  ibt   r10,#$001F                          ; $089112 |
-  and   r10                                 ; $089114 |
-  sub   r3                                  ; $089115 |
-  lob                                       ; $089116 |
-  to r7                                     ; $089117 |
-  swap                                      ; $089118 |
-  with r6                                   ; $089119 |
-  getbh                                     ; $08911A |
-  inc   r14                                 ; $08911C |
-  from r6                                   ; $08911D |
-  lsr                                       ; $08911E |
-  lsr                                       ; $08911F |
-  lsr                                       ; $089120 |
-  lsr                                       ; $089121 |
-  lsr                                       ; $089122 |
-  and   r10                                 ; $089123 |
-  sub   r4                                  ; $089124 |
-  lob                                       ; $089125 |
-  to r8                                     ; $089126 |
-  swap                                      ; $089127 |
-  from r6                                   ; $089128 |
-  swap                                      ; $089129 |
-  lsr                                       ; $08912A |
-  lsr                                       ; $08912B |
-  and   r10                                 ; $08912C |
-  sub   r5                                  ; $08912D |
-  lob                                       ; $08912E |
-  to r9                                     ; $08912F |
-  swap                                      ; $089130 |
-  ibt   r6,#$0000                           ; $089131 |
-  ibt   r12,#$0010                          ; $089133 |
-  from r7                                   ; $089135 |
-  fmult                                     ; $089136 |
-  add   r3                                  ; $089137 |
-  ibt   r10,#$0020                          ; $089138 |
-  or    r10                                 ; $08913A |
-  stb   (r1)                                ; $08913B |
-  dec   r1                                  ; $08913D |
-  from r8                                   ; $08913E |
-  fmult                                     ; $08913F |
-  add   r4                                  ; $089140 |
-  ibt   r10,#$0040                          ; $089141 |
-  or    r10                                 ; $089143 |
-  stb   (r1)                                ; $089144 |
-  dec   r1                                  ; $089146 |
-  from r9                                   ; $089147 |
-  fmult                                     ; $089148 |
-  add   r5                                  ; $089149 |
-  ibt   r10,#$FF80                          ; $08914A |
-  or    r10                                 ; $08914C |
-  stb   (r2)                                ; $08914D |
-  ibt   r0,#$0010                           ; $08914F |
-  to r6                                     ; $089151 |
-  add   r6                                  ; $089152 |
+  move  r6,r0                               ; $089110 | r6 = [next color low]
+  ibt   r10,#$001F                          ; $089112 |\
+  and   r10                                 ; $089114 | | Mask out red color
+  sub   r3                                  ; $089115 | | [next red color] - [current red color]
+  lob                                       ; $089116 | | Filter out low byte
+  to r7                                     ; $089117 | |
+  swap                                      ; $089118 | | r7 = [red color diff]
+  with r6                                   ; $089119 | |
+  getbh                                     ; $08911A | | get high byte part of next color
+  inc   r14                                 ; $08911C |/
+  from r6                                   ; $08911D |\
+  lsr                                       ; $08911E | |
+  lsr                                       ; $08911F | | Shift down green color
+  lsr                                       ; $089120 | |
+  lsr                                       ; $089121 | |
+  lsr                                       ; $089122 |/
+  and   r10                                 ; $089123 |\  Mask out green color
+  sub   r4                                  ; $089124 | | [next green color] - [current green color]
+  lob                                       ; $089125 | | Filter out low byte
+  to r8                                     ; $089126 | | r8 = [green color diff]
+  swap                                      ; $089127 |/
+  from r6                                   ; $089128 |\
+  swap                                      ; $089129 | | [next color] >> 10
+  lsr                                       ; $08912A | |
+  lsr                                       ; $08912B |/
+  and   r10                                 ; $08912C |\  Mask out blue color
+  sub   r5                                  ; $08912D | | [next blue color] - [current blue color]
+  lob                                       ; $08912E | |
+  to r9                                     ; $08912F | | r9 = [blue color diff]
+  swap                                      ; $089130 |/
+  ibt   r6,#$0000                           ; $089131 | init multiplier
+  ibt   r12,#$0010                          ; $089133 | $0010 loops
+; loops 16 times for each color
+; each loop adding n/16 of each color diff
+; and then stores it to buffer
+  from r7                                   ; $089135 |\  [red color diff]
+  fmult                                     ; $089136 | | multiply with $0000 - $0100 (+$10 per loop)
+  add   r3                                  ; $089137 | | Add with current red color
+  ibt   r10,#$0020                          ; $089138 | |
+  or    r10                                 ; $08913A | | Set red color flag for COLDATA register
+  stb   (r1)                                ; $08913B |/  Store to buffer
+  dec   r1                                  ; $08913D |   Dec to next entry
+  from r8                                   ; $08913E |\  [green color diff]
+  fmult                                     ; $08913F | | multiply with $0000 - $0100
+  add   r4                                  ; $089140 | | Add with current green color
+  ibt   r10,#$0040                          ; $089141 | |
+  or    r10                                 ; $089143 | | Set green color flag
+  stb   (r1)                                ; $089144 |/  Store to buffer
+  dec   r1                                  ; $089146 |   Dec to next entry
+  from r9                                   ; $089147 |\  [blue color diff]
+  fmult                                     ; $089148 | | multiply with $0000 - $0100
+  add   r5                                  ; $089149 | | Add with current blue color
+  ibt   r10,#$0080                          ; $08914A | |
+  or    r10                                 ; $08914C | | Set blue color flag
+  stb   (r2)                                ; $08914D |/  Store to blue color buffer
+  ibt   r0,#$0010                           ; $08914F |\
+  to r6                                     ; $089151 | | r6 += $0010
+  add   r6                                  ; $089152 |/  add 1/16 of fraction each loop
   loop                                      ; $089153 |
-  dec   r2                                  ; $089154 |
-  from r7                                   ; $089155 |
-  swap                                      ; $089156 |
-  to r3                                     ; $089157 |
-  add   r3                                  ; $089158 |
-  from r8                                   ; $089159 |
-  swap                                      ; $08915A |
-  to r4                                     ; $08915B |
-  add   r4                                  ; $08915C |
-  from r9                                   ; $08915D |
-  swap                                      ; $08915E |
-  to r5                                     ; $08915F |
-  add   r5                                  ; $089160 |
-  dec   r11                                 ; $089161 |
-  bne CODE_08910F                           ; $089162 |
+  dec   r2                                  ; $089154 | Dec to next entry
+
+; adds the diff to original color to get next color as current without re-reading table
+  from r7                                   ; $089155 |\  [red color diff]
+  swap                                      ; $089156 | | color from high byte -> low
+  to r3                                     ; $089157 | | [current red color]
+  add   r3                                  ; $089158 |/  Add diff to get next entry as current
+  from r8                                   ; $089159 |\  [green color diff]
+  swap                                      ; $08915A | |
+  to r4                                     ; $08915B | | [current green color]
+  add   r4                                  ; $08915C |/  Add diff to get next entry as current
+  from r9                                   ; $08915D |\  [blue color diff]
+  swap                                      ; $08915E | |
+  to r5                                     ; $08915F | | [current blue color]
+  add   r5                                  ; $089160 |/  Add diff to get next entry as current
+  dec   r11                                 ; $089161 | Decrease color count
+  bne .get_next_diff                        ; $089162 | Branch if all colors done
   getb                                      ; $089164 |
-  ibt   r0,#$0020                           ; $089165 |
-  to r3                                     ; $089167 |
-  or    r3                                  ; $089168 |
-  ibt   r0,#$0040                           ; $089169 |
-  to r4                                     ; $08916B |
-  or    r4                                  ; $08916C |
-  ibt   r0,#$FF80                           ; $08916D |
-  or    r5                                  ; $08916F |
-  iwt   r12,#$0046                          ; $089170 |
-  move  r13,r15                             ; $089173 |
-  from r3                                   ; $089175 |
-  stb   (r1)                                ; $089176 |
-  dec   r1                                  ; $089178 |
-  from r4                                   ; $089179 |
-  stb   (r1)                                ; $08917A |
-  dec   r1                                  ; $08917C |
-  stb   (r2)                                ; $08917D |
+
+  ibt   r0,#$0020                           ; $089165 |\
+  to r3                                     ; $089167 | | [current red color]
+  or    r3                                  ; $089168 |/  set red color flag
+  ibt   r0,#$0040                           ; $089169 |\
+  to r4                                     ; $08916B | | [current green color]
+  or    r4                                  ; $08916C |/  set green color flag
+  ibt   r0,#$FF80                           ; $08916D |\  blue color flag
+  or    r5                                  ; $08916F |/  r0 = [current blue color]
+  iwt   r12,#$0046                          ; $089170 |   Write 70 bytes
+; because 16 gradients between 24 colors aren't enough to cover the whole table
+; we just write the last color (top of screen) as the same color
+  move  r13,r15                             ; $089173 | set loop point here
+  from r3                                   ; $089175 |\ [current red color]
+  stb   (r1)                                ; $089176 |/ Store to buffer
+  dec   r1                                  ; $089178 |  next entry
+  from r4                                   ; $089179 |\ [current green color]
+  stb   (r1)                                ; $08917A |/ Store to buffer
+  dec   r1                                  ; $08917C |  next entry
+  stb   (r2)                                ; $08917D |  Store [current blue color] to buffer
   loop                                      ; $08917F |
-  dec   r2                                  ; $089180 |
-  stop                                      ; $089181 |
+  dec   r2                                  ; $089180 |  next entry
+  stop                                      ; $089181 |  Draw BG gradient Exit
   nop                                       ; $089182 |
 
   romb                                      ; $089183 |
@@ -3785,7 +3799,7 @@ CODE_0891FB:
   ibt   r0,#$0008                           ; $08920D |
   romb                                      ; $08920F |
   ibt   r10,#$0000                          ; $089211 |
-  iwt   r11,#$AE18                          ; $089213 |
+  iwt   r11,#cosine_8                       ; $089213 |
   cache                                     ; $089216 |
   iwt   r13,#$921B                          ; $089217 |
   from r2                                   ; $08921A |
@@ -3888,21 +3902,21 @@ CODE_08924D:
   from r8                                   ; $089295 |
   to r11                                    ; $089296 |
   hib                                       ; $089297 |
-  iwt   r0,#$AE18                           ; $089298 |
+  iwt   r0,#cosine_8                        ; $089298 |
   to r14                                    ; $08929B |
   add   r11                                 ; $08929C |
   getb                                      ; $08929D |
   mult  r1                                  ; $08929E |
   to r9                                     ; $08929F |
   hib                                       ; $0892A0 |
-  iwt   r0,#$AE58                           ; $0892A1 |
+  iwt   r0,#sine_8                          ; $0892A1 |
   to r14                                    ; $0892A4 |
   add   r11                                 ; $0892A5 |
   getb                                      ; $0892A6 |
   mult  r2                                  ; $0892A7 |
   to r10                                    ; $0892A8 |
   hib                                       ; $0892A9 |
-  iwt   r0,#$AE18                           ; $0892AA |
+  iwt   r0,#cosine_8                        ; $0892AA |
   to r14                                    ; $0892AD |
   add   r4                                  ; $0892AE |
   getb                                      ; $0892AF |
@@ -3916,7 +3930,7 @@ CODE_08924D:
   asr                                       ; $0892B7 |
   to r11                                    ; $0892B8 |
   asr                                       ; $0892B9 |
-  iwt   r0,#$AE58                           ; $0892BA |
+  iwt   r0,#sine_8                          ; $0892BA |
   to r14                                    ; $0892BD |
   add   r4                                  ; $0892BE |
   getb                                      ; $0892BF |
@@ -3938,7 +3952,7 @@ CODE_08924D:
   stw   (r3)                                ; $0892D2 |
   inc   r3                                  ; $0892D3 |
   inc   r3                                  ; $0892D4 |
-  iwt   r0,#$AE58                           ; $0892D5 |
+  iwt   r0,#sine_8                          ; $0892D5 |
   to r14                                    ; $0892D8 |
   add   r4                                  ; $0892D9 |
   getb                                      ; $0892DA |
@@ -3952,7 +3966,7 @@ CODE_08924D:
   asr                                       ; $0892E2 |
   to r11                                    ; $0892E3 |
   asr                                       ; $0892E4 |
-  iwt   r0,#$AE18                           ; $0892E5 |
+  iwt   r0,#cosine_8                        ; $0892E5 |
   to r14                                    ; $0892E8 |
   add   r4                                  ; $0892E9 |
   getb                                      ; $0892EA |
@@ -4339,122 +4353,129 @@ CODE_089516:
   stop                                      ; $089516 |
   nop                                       ; $089517 |
 
-  ibt   r0,#$0008                           ; $089518 |
-  romb                                      ; $08951A |
-  lms   r7,($0094)                          ; $08951C |
-  lms   r8,($009C)                          ; $08951F |
-  iwt   r0,#$2000                           ; $089522 |
-  or    r7                                  ; $089525 |
-  sm    ($1EEE),r0                          ; $089526 |
-  iwt   r9,#$1EF2                           ; $08952A |
+; fuzzy offsets routine
+; computes all Y column offsets for BG1
+; based on amplitude and offset sinewave
+; calculations
+; parameters:
+; r1: [amplitude_fuzzy_wave]
+; r2: [positional_wave_offset]
+gsu_compute_fuzzy_BG1_offsets:
+  ibt   r0,#$0008                           ; $089518 |\ rom bank = this bank
+  romb                                      ; $08951A |/
+  lms   r7,($0094)                          ; $08951C |\ r7 = [camera_X]
+  lms   r8,($009C)                          ; $08951F |/ r8 = [camera_Y]
+  iwt   r0,#$2000                           ; $089522 |\
+  or    r7                                  ; $089525 | | flag on $2000 bit onto camera X
+  sm    ($1EEE),r0                          ; $089526 |/  -> ($1EEE)
+  iwt   r9,#$1EF2                           ; $08952A | beginning of offset tables
   cache                                     ; $08952D |
-  ibt   r12,#$0020                          ; $08952E |
-  move  r13,r15                             ; $089530 |
-  stw   (r9)                                ; $089532 |
-  inc   r9                                  ; $089533 |
-  loop                                      ; $089534 |
-  inc   r9                                  ; $089535 |
+  ibt   r12,#$0020                          ; $08952E |\
+  move  r13,r15                             ; $089530 | |
+  stw   (r9)                                ; $089532 | | loop through camera X row offsets
+  inc   r9                                  ; $089533 | | set all to simply camera X (no offset)
+  loop                                      ; $089534 | | (with BG1 OPT valid bit on)
+  inc   r9                                  ; $089535 |/
   with r2                                   ; $089536 |
   swap                                      ; $089537 |
-  from r7                                   ; $089538 |
-  lsr                                       ; $089539 |
-  lsr                                       ; $08953A |
-  lsr                                       ; $08953B |
-  add   r2                                  ; $08953C |
-  move  r3,r0                               ; $08953D |
-  and   #15                                 ; $08953F |
-  move  r7,r0                               ; $089541 |
-  from r3                                   ; $089543 |
-  lsr                                       ; $089544 |
-  lsr                                       ; $089545 |
-  lsr                                       ; $089546 |
-  lsr                                       ; $089547 |
-  to r5                                     ; $089548 |
-  and   #7                                  ; $089549 |
-  iwt   r0,#$AB90                           ; $08954B |
-  to r14                                    ; $08954E |
-  add   r5                                  ; $08954F |
-  getb                                      ; $089550 |
-  move  r2,r0                               ; $089551 |
-  add   r0                                  ; $089553 |
-  add   r0                                  ; $089554 |
-  add   r0                                  ; $089555 |
-  add   r0                                  ; $089556 |
-  to r10                                    ; $089557 |
-  umult r5                                  ; $089558 |
-  from r2                                   ; $08955A |
-  add   r2                                  ; $08955B |
-  iwt   r6,#$2200                           ; $08955C |
-  add   r6                                  ; $08955F |
-  to r6                                     ; $089560 |
-  ldw   (r0)                                ; $089561 |
-  from r1                                   ; $089562 |
-  to r6                                     ; $089563 |
-  fmult                                     ; $089564 |
-  from r7                                   ; $089565 |
-  umult r2                                  ; $089566 |
-  to r4                                     ; $089568 |
-  add   r10                                 ; $089569 |
-  iwt   r3,#$AC18                           ; $08956A |
-  iwt   r10,#$2000                          ; $08956D |
-  iwt   r11,#$1FFF                          ; $089570 |
-  ibt   r12,#$0021                          ; $089573 |
-  iwt   r13,#$9579                          ; $089575 |
-  from r4                                   ; $089578 |
-  lob                                       ; $089579 |
-  add   r0                                  ; $08957A |
-  to r14                                    ; $08957B |
-  add   r3                                  ; $08957C |
-  getb                                      ; $08957D |
+  from r7                                   ; $089538 |\
+  lsr                                       ; $089539 | | [cam_wave_x]
+  lsr                                       ; $08953A | | r3 = camera_X >> 3
+  lsr                                       ; $08953B | | + positional_wave_offset
+  add   r2                                  ; $08953C | |
+  move  r3,r0                               ; $08953D |/
+  and   #15                                 ; $08953F |\  [cam_wave_x_low4]
+  move  r7,r0                               ; $089541 |/  r7 = cam_wave_x & $000F
+  from r3                                   ; $089543 |\  000000000llll000 from camera_X
+  lsr                                       ; $089544 | |
+  lsr                                       ; $089545 | | [cam_wave_x_high3]
+  lsr                                       ; $089546 | | r5 = cam_wave_x >> 4
+  lsr                                       ; $089547 | | & $0007 (low three bits)
+  to r5                                     ; $089548 | | 000000hhh0000000 from camera_X
+  and   #7                                  ; $089549 |/
+  iwt   r0,#fuzzy_alignment                 ; $08954B |\
+  to r14                                    ; $08954E | | [alignment_low4]
+  add   r5                                  ; $08954F | | r2 = ($AB90+cam_wave_x_high3)
+  getb                                      ; $089550 | | retrieve alignment lookup table value
+  move  r2,r0                               ; $089551 |/
+  add   r0                                  ; $089553 |\  [aligned_cam_wave_x_high3]
+  add   r0                                  ; $089554 | | r10 = alignment_low4 << 4
+  add   r0                                  ; $089555 | | * cam_wave_x_high3
+  add   r0                                  ; $089556 | | possible values:
+  to r10                                    ; $089557 | | 0, $80, $100, $180, $200, $280, $600, $700
+  umult r5                                  ; $089558 |/
+  from r2                                   ; $08955A |\
+  add   r2                                  ; $08955B | |
+  iwt   r6,#$2200                           ; $08955C | | [aligned_amplitude]
+  add   r6                                  ; $08955F | | r6 = 1 / alignment_low4 << 1
+  to r6                                     ; $089560 | | * amplitude_fuzzy_wave
+  ldw   (r0)                                ; $089561 | | (therefore, amplitude_fuzzy_wave
+  from r1                                   ; $089562 | | / alignment_low4 << 1)
+  to r6                                     ; $089563 | |
+  fmult                                     ; $089564 |/
+  from r7                                   ; $089565 |\  [aligned_cam_wave_x]
+  umult r2                                  ; $089566 | | r4 = cam_wave_x_low4 * alignment_low4
+  to r4                                     ; $089568 | | + aligned_cam_wave_x_high3
+  add   r10                                 ; $089569 |/  put humpty back together: 000000000hhhllll
+  iwt   r3,#sine_16                         ; $08956A | sine table address
+  iwt   r10,#$2000                          ; $08956D | or mask (BG1 OPT valid bit)
+  iwt   r11,#$1FFF                          ; $089570 | and mask
+  ibt   r12,#$0021                          ; $089573 |\ loop through camera Y column offsets
+  iwt   r13,#$9579                          ; $089575 |/ starting at $701F32
+  from r4                                   ; $089578 |\
+  lob                                       ; $089579 | | [aligned_cam_wave_x_sinaddr]
+  add   r0                                  ; $08957A | | r14 = aligned_cam_wave_x & $00FF
+  to r14                                    ; $08957B | | << 1 + sine table address
+  add   r3                                  ; $08957C |/
+  getb                                      ; $08957D | r0 = sin(aligned_cam_wave_x) low byte
   inc   r14                                 ; $08957E |
-  with r4                                   ; $08957F |
-  add   r2                                  ; $089580 |
-  inc   r7                                  ; $089581 |
-  getbh                                     ; $089582 |
-  fmult                                     ; $089584 |
-  add   r8                                  ; $089585 |
-  and   r11                                 ; $089586 |
-  or    r10                                 ; $089587 |
-  ibt   r14,#$0021                          ; $089588 |
-  with r14                                  ; $08958A |
-  sub   r12                                 ; $08958B |
-  bne CODE_089596                           ; $08958C |
-  nop                                       ; $08958E |
-  sm    ($1EF0),r0                          ; $08958F |
-  bra CODE_08959A                           ; $089593 |
+  with r4                                   ; $08957F |\ aligned_cam_wave_x += alignment_low4
+  add   r2                                  ; $089580 |/ go to next column
+  inc   r7                                  ; $089581 | increment cam_wave_x_low4 (go to next column)
+  getbh                                     ; $089582 | r0 = full sin(aligned_cam_wave_x)
+  fmult                                     ; $089584 |\  [cam_y_offset]
+  add   r8                                  ; $089585 | | r0 = aligned_amplitude * sin(aligned_cam_wave_x)
+  and   r11                                 ; $089586 | | + camera_Y & $1FFF | $2000 (BG1 OPT valid bit)
+  or    r10                                 ; $089587 |/  final resultant value to store as offset
+  ibt   r14,#$0021                          ; $089588 |\
+  with r14                                  ; $08958A | |
+  sub   r12                                 ; $08958B | | if we are on the last iteration
+  bne .store_y_offset_table                 ; $08958C | | (# 33, one past the 32nd entry)
+  nop                                       ; $08958E | | don't actually store in table
+  sm    ($1EF0),r0                          ; $08958F | | instead just store in $1EF0
+  bra .check_high_3                         ; $089593 | |
+  with r7                                   ; $089595 |/
 
-  with r7                                   ; $089595 |
-
-CODE_089596:
-  stw   (r9)                                ; $089596 |
-  inc   r9                                  ; $089597 |
-  inc   r9                                  ; $089598 |
+.store_y_offset_table
+  stw   (r9)                                ; $089596 |\  store cam_y_offset computed above
+  inc   r9                                  ; $089597 | | in y offset table
+  inc   r9                                  ; $089598 |/  and move to next column
   with r7                                   ; $089599 |
 
-CODE_08959A:
-  and   #15                                 ; $08959A |
-  bne CODE_0895B5                           ; $08959C |
-  nop                                       ; $08959E |
-  inc   r5                                  ; $08959F |
-  with r5                                   ; $0895A0 |
-  and   #7                                  ; $0895A1 |
-  iwt   r0,#$AB90                           ; $0895A3 |
-  to r14                                    ; $0895A6 |
-  add   r5                                  ; $0895A7 |
-  getb                                      ; $0895A8 |
-  move  r2,r0                               ; $0895A9 |
-  add   r0                                  ; $0895AB |
-  iwt   r6,#$2200                           ; $0895AC |
-  add   r6                                  ; $0895AF |
-  to r6                                     ; $0895B0 |
-  ldw   (r0)                                ; $0895B1 |
-  from r1                                   ; $0895B2 |
-  to r6                                     ; $0895B3 |
-  fmult                                     ; $0895B4 |
+.check_high_3
+  and   #15                                 ; $08959A | r7 = cam_wave_x_low4 modulus $000F
+  bne .next_column                          ; $08959C |\ nothing else to do if not yet
+  nop                                       ; $08959E |/ crossed over to 0 (every 16th column)
+  inc   r5                                  ; $08959F |\
+  with r5                                   ; $0895A0 | | if we've crossed to 0,
+  and   #7                                  ; $0895A1 | | we need to increment high 3 bits
+  iwt   r0,#$AB90                           ; $0895A3 | | r5 = cam_wave_x_high3++
+  to r14                                    ; $0895A6 | | also update these values
+  add   r5                                  ; $0895A7 | | correspondingly:
+  getb                                      ; $0895A8 | |
+  move  r2,r0                               ; $0895A9 | | r2 = new alignment_low4
+  add   r0                                  ; $0895AB | | from alignment lookup
+  iwt   r6,#$2200                           ; $0895AC | |
+  add   r6                                  ; $0895AF | | r6 = amplitude_fuzzy_wave
+  to r6                                     ; $0895B0 | | / new alignment_low4 << 1
+  ldw   (r0)                                ; $0895B1 | |
+  from r1                                   ; $0895B2 | |
+  to r6                                     ; $0895B3 | |
+  fmult                                     ; $0895B4 |/
 
-CODE_0895B5:
-  loop                                      ; $0895B5 |
-  from r4                                   ; $0895B6 |
+.next_column
+  loop                                      ; $0895B5 |\ continue processing next column
+  from r4                                   ; $0895B6 |/
   stop                                      ; $0895B7 |
   nop                                       ; $0895B8 |
 
@@ -4630,7 +4651,7 @@ CODE_08969E:
   adc   r1                                  ; $0896A5 |
   ibt   r2,#$0004                           ; $0896A7 |
   iwt   r5,#$FF00                           ; $0896A9 |
-  iwt   r8,#$AE18                           ; $0896AC |
+  iwt   r8,#cosine_8                        ; $0896AC |
   ibt   r9,#$0000                           ; $0896AF |
   move  r14,r8                              ; $0896B1 |
   getb                                      ; $0896B3 |
@@ -4679,12 +4700,12 @@ CODE_0896D8:
   ldw   (r0)                                ; $0896EB |
   to r2                                     ; $0896EC |
   hib                                       ; $0896ED |
-  iwt   r0,#$AE18                           ; $0896EE |
+  iwt   r0,#cosine_8                        ; $0896EE |
   to r14                                    ; $0896F1 |
   add   r2                                  ; $0896F2 |
   to r3                                     ; $0896F3 |
   getb                                      ; $0896F4 |
-  iwt   r0,#$AE58                           ; $0896F5 |
+  iwt   r0,#sine_8                          ; $0896F5 |
   to r14                                    ; $0896F8 |
   add   r2                                  ; $0896F9 |
   to r4                                     ; $0896FA |
@@ -5411,7 +5432,7 @@ CODE_089A99:
   not                                       ; $089AD8 |
   to r2                                     ; $089AD9 |
   lob                                       ; $089ADA |
-  iwt   r0,#$AE18                           ; $089ADB |
+  iwt   r0,#cosine_8                        ; $089ADB |
   to r14                                    ; $089ADE |
   add   r2                                  ; $089ADF |
   from r9                                   ; $089AE0 |
@@ -5419,7 +5440,7 @@ CODE_089A99:
   lsr                                       ; $089AE2 |
   to r9                                     ; $089AE3 |
   lsr                                       ; $089AE4 |
-  iwt   r4,#$AE58                           ; $089AE5 |
+  iwt   r4,#sine_8                          ; $089AE5 |
   getbs                                     ; $089AE8 |
   from r4                                   ; $089AEA |
   to r14                                    ; $089AEB |
@@ -5592,7 +5613,7 @@ CODE_089BB9:
   ibt   r0,#$0008                           ; $089BC5 |
   romb                                      ; $089BC7 |
   move  r6,r11                              ; $089BC9 |
-  iwt   r0,#$AB98                           ; $089BCB |
+  iwt   r0,#cosine_16                       ; $089BCB |
   add   r14                                 ; $089BCE |
   to r14                                    ; $089BCF |
   add   r14                                 ; $089BD0 |
@@ -5621,11 +5642,11 @@ CODE_089BB9:
   lmult                                     ; $089BF7 |
   ibt   r0,#$0008                           ; $089BF9 |
   romb                                      ; $089BFB |
-  iwt   r0,#$AB98                           ; $089BFD |
+  iwt   r0,#cosine_16                       ; $089BFD |
   add   r2                                  ; $089C00 |
   to r14                                    ; $089C01 |
   add   r2                                  ; $089C02 |
-  iwt   r0,#$AC18                           ; $089C03 |
+  iwt   r0,#sine_16                         ; $089C03 |
   add   r2                                  ; $089C06 |
   to r2                                     ; $089C07 |
   add   r2                                  ; $089C08 |
@@ -5933,7 +5954,14 @@ CODE_089D9A:
   stop                                      ; $089DAA |
   nop                                       ; $089DAB |
 
-  db $01, $FF, $02, $03                     ; $089DAC |
+  db $01, $FF                               ; $089DAC |
+
+; contains byte-sized amplitude values
+; to multiply by sin(x) for wavy calculation.
+; indexing based on middle 5 bits of
+; camera X + time offset
+wavy_amplitudes:
+  db $02, $03                               ; $089DAE |
   db $04, $03, $02, $03                     ; $089DB0 |
   db $04, $04, $05, $06                     ; $089DB4 |
   db $07, $08, $09, $0A                     ; $089DB8 |
@@ -5943,378 +5971,438 @@ CODE_089D9A:
   db $06, $07, $06, $05                     ; $089DC8 |
   db $04, $03                               ; $089DCC |
 
+; handles offset per tile for moving platforms
+; and wavy effect (like in lava)
+; parameters:
+; r7: [wavy_time] current time for sinewave & moving platform oscillation
+; r8: camera X
+; r9: camera Y
+gsu_opt_moving_platforms:
   cache                                     ; $089DCE |
-  sms   ($0000),r7                          ; $089DCF |
-  sms   ($0002),r8                          ; $089DD2 |
-  sms   ($0004),r9                          ; $089DD5 |
-  iwt   r0,#$2000                           ; $089DD8 |
-  to r3                                     ; $089DDB |
-  or    r8                                  ; $089DDC |
-  iwt   r2,#$1EF2                           ; $089DDD |
+  sms   ($0000),r7                          ; $089DCF |\
+  sms   ($0002),r8                          ; $089DD2 | | cache parameters
+  sms   ($0004),r9                          ; $089DD5 |/
+  iwt   r0,#$2000                           ; $089DD8 |\  [OPT_camera_x]
+  to r3                                     ; $089DDB | | r3 = camera X with BG1 OPT valid bit
+  or    r8                                  ; $089DDC |/  flagged on
+  iwt   r2,#!s_opt_x_offsets_gsu            ; $089DDD | beginning of OPT offset table
   ibt   r0,#$0000                           ; $089DE0 |
-  iwt   r5,#$1FC2                           ; $089DE2 |
-  ibt   r12,#$0020                          ; $089DE5 |
-  move  r13,r15                             ; $089DE7 |
-  stb   (r5)                                ; $089DE9 |
-  inc   r5                                  ; $089DEB |
-  from r3                                   ; $089DEC |
-  stw   (r2)                                ; $089DED |
-  inc   r2                                  ; $089DEE |
-  loop                                      ; $089DEF |
-  inc   r2                                  ; $089DF0 |
-  stb   (r5)                                ; $089DF1 |
-  iwt   r4,#$1F72                           ; $089DF3 |
-  from r8                                   ; $089DF6 |
-  lsr                                       ; $089DF7 |
-  lsr                                       ; $089DF8 |
-  lsr                                       ; $089DF9 |
-  to r3                                     ; $089DFA |
-  lsr                                       ; $089DFB |
-  from r9                                   ; $089DFC |
-  lsr                                       ; $089DFD |
-  lsr                                       ; $089DFE |
-  lsr                                       ; $089DFF |
-  to r10                                    ; $089E00 |
-  lsr                                       ; $089E01 |
-  ibt   r12,#$0014                          ; $089E02 |
-  move  r13,r15                             ; $089E04 |
-  from r4                                   ; $089E06 |
-  to r1                                     ; $089E07 |
-  add   #3                                  ; $089E08 |
-  ldb   (r1)                                ; $089E0A |
-  move  r11,r0                              ; $089E0C |
-  to r6                                     ; $089E0E |
-  add   #11                                 ; $089E0F |
-  move  r1,r4                               ; $089E11 |
-  inc   r1                                  ; $089E13 |
-  ldb   (r1)                                ; $089E14 |
-  sub   r10                                 ; $089E16 |
-  add   r11                                 ; $089E17 |
-  cmp   r6                                  ; $089E18 |
-  beq CODE_089E20                           ; $089E1A |
-  nop                                       ; $089E1C |
-  bcs CODE_089E69                           ; $089E1D |
-  nop                                       ; $089E1F |
+  iwt   r5,#!s_opt_columns_gsu              ; $089DE2 |
+  ibt   r12,#$0020                          ; $089DE5 |\ begin loop $20 times
+  move  r13,r15                             ; $089DE7 |/
 
-CODE_089E20:
-  from r4                                   ; $089E20 |
-  to r1                                     ; $089E21 |
-  add   #2                                  ; $089E22 |
-  ldb   (r1)                                ; $089E24 |
-  move  r11,r0                              ; $089E26 |
-  to r6                                     ; $089E28 |
-  add   #15                                 ; $089E29 |
-  inc   r6                                  ; $089E2B |
-  ldb   (r4)                                ; $089E2C |
-  sub   r3                                  ; $089E2E |
-  move  r5,r0                               ; $089E2F |
-  add   r11                                 ; $089E31 |
-  cmp   r6                                  ; $089E32 |
-  beq CODE_089E3A                           ; $089E34 |
-  nop                                       ; $089E36 |
-  bcs CODE_089E69                           ; $089E37 |
-  nop                                       ; $089E39 |
+.OPT_x_loop
+  stb   (r5)                                ; $089DE9 |\
+  inc   r5                                  ; $089DEB | | loop through 2 tables
+  from r3                                   ; $089DEC | | clear out wavy_column table
+  stw   (r2)                                ; $089DED | | with 00's
+  inc   r2                                  ; $089DEE | | and store OPT_camera_x
+  loop                                      ; $089DEF | | in every entry of
+  inc   r2                                  ; $089DF0 | | OPT X offsets
+  stb   (r5)                                ; $089DF1 |/  end .OPT_x_loop
+  iwt   r4,#!s_opt_wavy_gsu                 ; $089DF3 | r4 = [current_wavy_entry]
+  from r8                                   ; $089DF6 |\
+  lsr                                       ; $089DF7 | | [cam_x_tile]
+  lsr                                       ; $089DF8 | | r3 = X tile (16 wide) of camera
+  lsr                                       ; $089DF9 | |
+  to r3                                     ; $089DFA | |
+  lsr                                       ; $089DFB |/
+  from r9                                   ; $089DFC |\
+  lsr                                       ; $089DFD | | [cam_y_tile]
+  lsr                                       ; $089DFE | | r10 = Y tile (16 wide) of camera
+  lsr                                       ; $089DFF | |
+  to r10                                    ; $089E00 | |
+  lsr                                       ; $089E01 |/
+  ibt   r12,#$0014                          ; $089E02 |\ begin loop $14 times
+  move  r13,r15                             ; $089E04 |/
 
-CODE_089E3A:
-  iwt   r0,#$1FC2                           ; $089E3A |
-  ibt   r1,#$0020                           ; $089E3D |
-  to r6                                     ; $089E3F |
-  add   r1                                  ; $089E40 |
-  dec   r5                                  ; $089E41 |
-  with r5                                   ; $089E42 |
-  add   r5                                  ; $089E43 |
-  to r5                                     ; $089E44 |
-  add   r5                                  ; $089E45 |
-  inc   r11                                 ; $089E46 |
-  with r11                                  ; $089E47 |
-  add   r11                                 ; $089E48 |
-  from r8                                   ; $089E49 |
-  and   #8                                  ; $089E4A |
-  bne CODE_089E50                           ; $089E4C |
-  inc   r5                                  ; $089E4E |
-  inc   r5                                  ; $089E4F |
+; first, check if the effect is onscreen in both Y and X
+.wavy_loop
+  from r4                                   ; $089E06 |\  [wavy_height]
+  to r1                                     ; $089E07 | | r11 = last byte of current
+  add   #3                                  ; $089E08 | | entry in wavy table
+  ldb   (r1)                                ; $089E0A | |
+  move  r11,r0                              ; $089E0C |/
+  to r6                                     ; $089E0E |\ [wavy_height_plus_11]
+  add   #11                                 ; $089E0F |/
+  move  r1,r4                               ; $089E11 |\
+  inc   r1                                  ; $089E13 | | if second byte of wavy table, top y
+  ldb   (r1)                                ; $089E14 | | - cam_y_tile
+  sub   r10                                 ; $089E16 | | + wavy_height
+  add   r11                                 ; $089E17 | | <= wavy_height_plus_11
+  cmp   r6                                  ; $089E18 | | this tests "are we within 11
+  beq .check_wavy_X_onscreen                ; $089E1A | | tiles from camera Y?"
+  nop                                       ; $089E1C | | so, tests onscreen since black bars
+  bcs .wavy_loop_continue                   ; $089E1D | | take up 2 rows
+  nop                                       ; $089E1F |/  if so, run below else continue loop
 
-CODE_089E50:
-  dec   r11                                 ; $089E50 |
-  bmi CODE_089E69                           ; $089E51 |
-  nop                                       ; $089E53 |
-  iwt   r0,#$1FC1                           ; $089E54 |
-  cmp   r5                                  ; $089E57 |
-  beq CODE_089E5F                           ; $089E59 |
-  nop                                       ; $089E5B |
-  bcs CODE_089E63                           ; $089E5C |
-  nop                                       ; $089E5E |
+.check_wavy_X_onscreen
+  from r4                                   ; $089E20 |\
+  to r1                                     ; $089E21 | | [wavy_width]
+  add   #2                                  ; $089E22 | | r11 = third byte of wavy table
+  ldb   (r1)                                ; $089E24 | | the width of the rectangle
+  move  r11,r0                              ; $089E26 |/
+  to r6                                     ; $089E28 |\
+  add   #15                                 ; $089E29 | | [wavy_width_plus_16]
+  inc   r6                                  ; $089E2B |/
+  ldb   (r4)                                ; $089E2C |\  if first byte of wavy table, left x
+  sub   r3                                  ; $089E2E | | - cam_x_tile
+  move  r5,r0                               ; $089E2F | | [wavy_camrel_x_tile] r5 = cache this
+  add   r11                                 ; $089E31 | | + wavy_width
+  cmp   r6                                  ; $089E32 | | <= wavy_width_plus_16
+  beq .prep_wavy_column                     ; $089E34 | | tests within 16 tiles of camera
+  nop                                       ; $089E36 | | so, onscreen check
+  bcs .wavy_loop_continue                   ; $089E37 | | if so, run below else continue loop
+  nop                                       ; $089E39 |/
 
-CODE_089E5F:
-  ibt   r0,#$0001                           ; $089E5F |
-  stb   (r5)                                ; $089E61 |
+.prep_wavy_column
+  iwt   r0,#!s_opt_columns_gsu              ; $089E3A |\
+  ibt   r1,#$0020                           ; $089E3D | | [end_of_wavy_column]
+  to r6                                     ; $089E3F | | r6 = $1FE2
+  add   r1                                  ; $089E40 |/
+  dec   r5                                  ; $089E41 |\  [wavy_column_address]
+  with r5                                   ; $089E42 | | r5 = wavy_camrel_x_tile - 1
+  add   r5                                  ; $089E43 | | * 2
+  to r5                                     ; $089E44 | | + $1FC2 (lines up with columns)
+  add   r5                                  ; $089E45 |/  rel. wavy col. addr from left x of rect.
+  inc   r11                                 ; $089E46 |\  [wavy_width_counter] init width count
+  with r11                                  ; $089E47 | | r11 = wavy_width + 1
+  add   r11                                 ; $089E48 |/  * 2 because 16 vs. 8 bit tiles
+  from r8                                   ; $089E49 |\  if high bit of camera X pixel
+  and   #8                                  ; $089E4A | | is on - this tests which 8-pixel
+  bne .wavy_column_loop                     ; $089E4C | | wide column we're in within the
+  inc   r5                                  ; $089E4E | | 16-pixel chunk. increment one column
+  inc   r5                                  ; $089E4F |/  vs. two columns depending
 
-CODE_089E63:
-  from r5                                   ; $089E63 |
-  cmp   r6                                  ; $089E64 |
-  bcc CODE_089E50                           ; $089E66 |
-  inc   r5                                  ; $089E68 |
+; at this point, nested loop from left to right X of rectangle
+; flagging on all wavy columns that fall within the X bounds
+; we ignore if we are BEFORE the $1FC2 address of the table
+; and we exit loop upon reaching $1FE2, the end
 
-CODE_089E69:
-  with r4                                   ; $089E69 |
-  add   #4                                  ; $089E6A |
-  loop                                      ; $089E6C |
-  nop                                       ; $089E6D |
-  iwt   r0,#$2000                           ; $089E6E |
-  to r9                                     ; $089E71 |
-  or    r9                                  ; $089E72 |
-  ibt   r0,#$FFF8                           ; $089E73 |
-  and   r8                                  ; $089E75 |
-  add   r0                                  ; $089E76 |
-  to r7                                     ; $089E77 |
-  add   r7                                  ; $089E78 |
-  iwt   r0,#$00FF                           ; $089E79 |
-  and   r7                                  ; $089E7C |
-  iwt   r5,#$1FC2                           ; $089E7D |
-  ibt   r12,#$0021                          ; $089E80 |
-  move  r13,r15                             ; $089E82 |
-  to r1                                     ; $089E84 |
-  add   r0                                  ; $089E85 |
-  ldb   (r5)                                ; $089E86 |
-  lob                                       ; $089E88 |
-  bne CODE_089E91                           ; $089E89 |
-  nop                                       ; $089E8B |
-  move  r10,r9                              ; $089E8C |
-  bra CODE_089EBD                           ; $089E8E |
-  nop                                       ; $089E90 |
+; BUG_wavy_column_bounds
+; this should have checked > 1FC1 because the check
+; aims to prevent corruption of anything outside of
+; 1FC2-1FE1, but instead it checks >= 1FC1, so it
+; DOES corrupt 1FC1, which is part of a different table
+.wavy_column_loop
+  dec   r11                                 ; $089E50 |\  wavy_column_loop exit condition:
+  bmi .wavy_loop_continue                   ; $089E51 | | wavy_width_counter has
+  nop                                       ; $089E53 |/  exceeded width
+  iwt   r0,#$1FC1                           ; $089E54 |\  BUG_wavy_column_bounds
+  cmp   r5                                  ; $089E57 | | screen bounds check for wavy column table
+  beq .flag_on_wavy_column                  ; $089E59 | | if wavy_column_address <= $1FC1
+  nop                                       ; $089E5B | | then don't corrupt non-1FC2~1FE1 memory
+  bcs .check_end_wavy_column                ; $089E5C | | so ignore flagging on
+  nop                                       ; $089E5E |/  else flag on
 
-CODE_089E91:
-  iwt   r0,#$0008                           ; $089E91 |
-  romb                                      ; $089E94 |
-  iwt   r14,#$AC18                          ; $089E96 |
-  with r14                                  ; $089E99 |
-  add   r1                                  ; $089E9A |
-  getb                                      ; $089E9B |
-  inc   r14                                 ; $089E9C |
-  to r6                                     ; $089E9D |
-  getbh                                     ; $089E9E |
+.flag_on_wavy_column
+  ibt   r0,#$0001                           ; $089E5F |\ flag on current 8-pixel colunn
+  stb   (r5)                                ; $089E61 |/ for "show wavy effect here"
+
+.check_end_wavy_column
+  from r5                                   ; $089E63 |\  another wavy_column_loop exit condition:
+  cmp   r6                                  ; $089E64 | | if we've reached end_of_wavy_column
+  bcc .wavy_column_loop                     ; $089E66 | | which is right edge of screen,
+  inc   r5                                  ; $089E68 |/  don't continue, else nested loop
+; end .wavy_column_loop
+
+.wavy_loop_continue
+  with r4                                   ; $089E69 |\  increment
+  add   #4                                  ; $089E6A | | current_wavy_entry
+  loop                                      ; $089E6C | | and loop
+  nop                                       ; $089E6D |/  end .wavy_loop
+
+.prep_wavy_OPT_offsets
+  iwt   r0,#$2000                           ; $089E6E |\  [OPT_camera_y]
+  to r9                                     ; $089E71 | | r9 = camera Y with BG1 OPT valid bit
+  or    r9                                  ; $089E72 |/  flagged on
+  ibt   r0,#$FFF8                           ; $089E73 |\  [cam_X_plus_time]
+  and   r8                                  ; $089E75 | | r7 = mask off last 3 bits of camera X
+  add   r0                                  ; $089E76 | | (gets current 8-pixel column)
+  to r7                                     ; $089E77 | | * 2 + wavy_time
+  add   r7                                  ; $089E78 |/
+  iwt   r0,#$00FF                           ; $089E79 |\ [cam_X_plus_time_8]
+  and   r7                                  ; $089E7C |/ r0 = get only pixels (byte)
+  iwt   r5,#!s_opt_columns_gsu              ; $089E7D |\  begin loop through s_opt_columns_gsu
+  ibt   r12,#$0021                          ; $089E80 | | $21 times because one past end
+  move  r13,r15                             ; $089E82 |/  is checked for later
+
+.wavy_OPT_offsets_loop
+  to r1                                     ; $089E84 |\ [wavy_sine_X]
+  add   r0                                  ; $089E85 |/ r1 = cam_X_plus_time_8 * 2
+  ldb   (r5)                                ; $089E86 |\
+  lob                                       ; $089E88 | | if current column is flagged on
+  bne .compute_wavy_sine                    ; $089E89 | | for wavy effect
+  nop                                       ; $089E8B |/
+  move  r10,r9                              ; $089E8C |\  if not, set value to just be
+  bra .check_end_wavy_OPT_offsets           ; $089E8E | | current camera Y
+  nop                                       ; $089E90 |/  and continue
+
+.compute_wavy_sine
+  iwt   r0,#$0008                           ; $089E91 |\
+  romb                                      ; $089E94 | |
+  iwt   r14,#sine_16                        ; $089E96 | | [wavy_sine_value]
+  with r14                                  ; $089E99 | | r6 = 16-bit sine lookup
+  add   r1                                  ; $089E9A | | of wavy_sine_X
+  getb                                      ; $089E9B | |
+  inc   r14                                 ; $089E9C | |
+  to r6                                     ; $089E9D | |
+  getbh                                     ; $089E9E |/
   iwt   r0,#$0008                           ; $089EA0 |
   romb                                      ; $089EA3 |
-  from r7                                   ; $089EA5 |
-  add   r7                                  ; $089EA6 |
-  add   r0                                  ; $089EA7 |
-  to r10                                    ; $089EA8 |
-  swap                                      ; $089EA9 |
-  ibt   r0,#$001F                           ; $089EAA |
-  and   r10                                 ; $089EAC |
-  iwt   r14,#$9DAE                          ; $089EAD |
-  to r14                                    ; $089EB0 |
-  add   r14                                 ; $089EB1 |
-  getb                                      ; $089EB2 |
-  move  r10,r0                              ; $089EB3 |
-  lmult                                     ; $089EB5 |
-  from r4                                   ; $089EB7 |
-  hib                                       ; $089EB8 |
-  add   r10                                 ; $089EB9 |
-  lob                                       ; $089EBA |
-  to r10                                    ; $089EBB |
-  add   r9                                  ; $089EBC |
+  from r7                                   ; $089EA5 |\
+  add   r7                                  ; $089EA6 | | [wavy_amplitude_index]
+  add   r0                                  ; $089EA7 | | r0 = 000000xxxxx00000 of cam X + time
+  to r10                                    ; $089EA8 | | shifted over to
+  swap                                      ; $089EA9 | | 00000000000xxxxx
+  ibt   r0,#$001F                           ; $089EAA | | to align with table lookup
+  and   r10                                 ; $089EAC |/
+  iwt   r14,#wavy_amplitudes                ; $089EAD |\
+  to r14                                    ; $089EB0 | | [wavy_amplitude]
+  add   r14                                 ; $089EB1 | | r10 = amp value from table
+  getb                                      ; $089EB2 | | index is wavy_amplitude_index
+  move  r10,r0                              ; $089EB3 |/
+  lmult                                     ; $089EB5 | r0,r4 = wavy_amplitude * wavy_sine_value
+  from r4                                   ; $089EB7 |\  [wavy_OPT_Y]
+  hib                                       ; $089EB8 | | r10 = high byte of low result, 0000yy00
+  add   r10                                 ; $089EB9 | | + wavy_amplitude
+  lob                                       ; $089EBA | | shifted to 000000yy
+  to r10                                    ; $089EBB | | + OPT_camera_y
+  add   r9                                  ; $089EBC |/  this is final Y value for this column's OPT
 
-CODE_089EBD:
-  ibt   r0,#$0021                           ; $089EBD |
-  cmp   r12                                 ; $089EBF |
-  bne CODE_089ECB                           ; $089EC1 |
-  nop                                       ; $089EC3 |
-  iwt   r0,#$1EF0                           ; $089EC4 |
-  from r10                                  ; $089EC7 |
-  stw   (r0)                                ; $089EC8 |
-  bra CODE_089ECF                           ; $089EC9 |
+.check_end_wavy_OPT_offsets
+  ibt   r0,#$0021                           ; $089EBD |\
+  cmp   r12                                 ; $089EBF | | if we are not yet on $21,
+  bne .store_wavy_OPT_Y                     ; $089EC1 | | the final entry
+  nop                                       ; $089EC3 |/
+  iwt   r0,#$1EF0                           ; $089EC4 |\
+  from r10                                  ; $089EC7 | | if we are, store wavy_OPT_Y
+  stw   (r0)                                ; $089EC8 | | into $1EF0, the camera Y offset
+  bra .wavy_OPT_offsets_continue            ; $089EC9 |/  and exit loop
 
-CODE_089ECB:
-  from r10                                  ; $089ECB |
-  stw   (r2)                                ; $089ECC |
-  inc   r2                                  ; $089ECD |
-  inc   r2                                  ; $089ECE |
+.store_wavy_OPT_Y
+  from r10                                  ; $089ECB |\
+  stw   (r2)                                ; $089ECC | | store wavy_OPT_Y in current slot
+  inc   r2                                  ; $089ECD | | in s_opt_y_offsets_gsu
+  inc   r2                                  ; $089ECE |/  and advance to next column
 
-CODE_089ECF:
-  with r8                                   ; $089ECF |
-  add   #8                                  ; $089ED0 |
-  with r7                                   ; $089ED2 |
-  add   #15                                 ; $089ED3 |
-  inc   r7                                  ; $089ED5 |
-  iwt   r0,#$00FF                           ; $089ED6 |
-  and   r7                                  ; $089ED9 |
-  loop                                      ; $089EDA |
-  inc   r5                                  ; $089EDB |
-  iwt   r5,#$1FC2                           ; $089EDC |
-  ibt   r0,#$0000                           ; $089EDF |
-  ibt   r12,#$0020                          ; $089EE1 |
-  move  r13,r15                             ; $089EE3 |
-  stb   (r5)                                ; $089EE5 |
-  loop                                      ; $089EE7 |
-  inc   r5                                  ; $089EE8 |
+.wavy_OPT_offsets_continue
+  with r8                                   ; $089ECF |\ camera X += 8
+  add   #8                                  ; $089ED0 |/ next 8 pixel column
+  with r7                                   ; $089ED2 |\  cam_X_plus_time += 16
+  add   #15                                 ; $089ED3 | | this goes to next 8-pixel
+  inc   r7                                  ; $089ED5 |/  column (because we're * 2'd)
+  iwt   r0,#$00FF                           ; $089ED6 |\ also reset cam_X_plus_time_8
+  and   r7                                  ; $089ED9 |/ with new incremented camera
+  loop                                      ; $089EDA |\ loop & next column in wavy_column
+  inc   r5                                  ; $089EDB |/ end .wavy_OPT_offsets_loop
+
+.clear_moving_platform_columns
+  iwt   r5,#!s_opt_columns_gsu              ; $089EDC |\
+  ibt   r0,#$0000                           ; $089EDF | | reset/clear the OPT columns
+  ibt   r12,#$0020                          ; $089EE1 | | table for moving platforms
+  move  r13,r15                             ; $089EE3 | | usage
+  stb   (r5)                                ; $089EE5 | |
+  loop                                      ; $089EE7 |/
+  inc   r5                                  ; $089EE8 | end clear_moving_platform_columns
   stb   (r5)                                ; $089EE9 |
-  iwt   r4,#$449E                           ; $089EEB |
-  lms   r0,($0002)                          ; $089EEE |
-  move  r8,r0                               ; $089EF1 |
-  lsr                                       ; $089EF3 |
-  lsr                                       ; $089EF4 |
-  lsr                                       ; $089EF5 |
-  to r3                                     ; $089EF6 |
-  lsr                                       ; $089EF7 |
-  lms   r0,($0004)                          ; $089EF8 |
-  lsr                                       ; $089EFB |
-  lsr                                       ; $089EFC |
-  lsr                                       ; $089EFD |
-  to r10                                    ; $089EFE |
-  lsr                                       ; $089EFF |
-  ibt   r12,#$0014                          ; $089F00 |
+
+.prep_moving_platforms
+  iwt   r4,#!s_opt_moving_platforms         ; $089EEB | loop through moving platforms table
+  lms   r0,($0002)                          ; $089EEE |\ r8 = camera X
+  move  r8,r0                               ; $089EF1 |/
+  lsr                                       ; $089EF3 |\
+  lsr                                       ; $089EF4 | | [cam_x_tile]
+  lsr                                       ; $089EF5 | | r3 = X tile (16 wide) of camera
+  to r3                                     ; $089EF6 | |
+  lsr                                       ; $089EF7 | |
+  lms   r0,($0004)                          ; $089EF8 |/
+  lsr                                       ; $089EFB |\
+  lsr                                       ; $089EFC | | [cam_y_tile]
+  lsr                                       ; $089EFD | | r10 = Y tile (16 wide) of camera
+  to r10                                    ; $089EFE | |
+  lsr                                       ; $089EFF |/
+  ibt   r12,#$0014                          ; $089F00 | loop 20 entries (rectangles)
   move  r13,r15                             ; $089F02 |
-  from r4                                   ; $089F04 |
-  to r1                                     ; $089F05 |
-  add   #3                                  ; $089F06 |
-  ldb   (r1)                                ; $089F08 |
-  move  r11,r0                              ; $089F0A |
-  to r6                                     ; $089F0C |
-  add   #11                                 ; $089F0D |
-  move  r1,r4                               ; $089F0F |
-  inc   r1                                  ; $089F11 |
-  ldb   (r1)                                ; $089F12 |
-  sub   r10                                 ; $089F14 |
-  add   r11                                 ; $089F15 |
-  cmp   r6                                  ; $089F16 |
-  beq CODE_089F1E                           ; $089F18 |
-  nop                                       ; $089F1A |
-  bcs CODE_089F6B                           ; $089F1B |
-  nop                                       ; $089F1D |
 
-CODE_089F1E:
-  from r4                                   ; $089F1E |
-  to r1                                     ; $089F1F |
-  add   #2                                  ; $089F20 |
-  ldb   (r1)                                ; $089F22 |
-  move  r11,r0                              ; $089F24 |
-  to r6                                     ; $089F26 |
-  add   #15                                 ; $089F27 |
-  inc   r6                                  ; $089F29 |
-  ldb   (r4)                                ; $089F2A |
-  sub   r3                                  ; $089F2C |
-  move  r5,r0                               ; $089F2D |
-  add   r11                                 ; $089F2F |
-  cmp   r6                                  ; $089F30 |
-  beq CODE_089F38                           ; $089F32 |
-  nop                                       ; $089F34 |
-  bcs CODE_089F6B                           ; $089F35 |
-  nop                                       ; $089F37 |
+; loop through all the rectangles in s_opt_moving_platforms
+; and check each one for within camera bounds for X and Y
+; apply the OPT values if so
+.moving_platforms_loop
+  from r4                                   ; $089F04 |\
+  to r1                                     ; $089F05 | | [moving_platform_height]
+  add   #3                                  ; $089F06 | | r11 = fourth entry: height - 1
+  ldb   (r1)                                ; $089F08 | | of rectangle
+  move  r11,r0                              ; $089F0A |/
+  to r6                                     ; $089F0C |\ [moving_height_plus_11]
+  add   #11                                 ; $089F0D |/
+  move  r1,r4                               ; $089F0F |\
+  inc   r1                                  ; $089F11 | | if second byte of moving table, top y
+  ldb   (r1)                                ; $089F12 | | - cam_y_tile
+  sub   r10                                 ; $089F14 | | + moving_platform_height
+  add   r11                                 ; $089F15 | | <= moving_height_plus_11
+  cmp   r6                                  ; $089F16 | | this tests "are we within 11
+  beq .check_moving_X_onscreen              ; $089F18 | | tiles from camera Y?"
+  nop                                       ; $089F1A | | so, tests onscreen since black bars
+  bcs .moving_platforms_continue            ; $089F1B | | take up 2 rows
+  nop                                       ; $089F1D |/  if so, run below else continue loop
 
-CODE_089F38:
-  iwt   r0,#$1FC2                           ; $089F38 |
-  ibt   r1,#$0020                           ; $089F3B |
-  to r6                                     ; $089F3D |
-  add   r1                                  ; $089F3E |
-  with r5                                   ; $089F3F |
-  add   r5                                  ; $089F40 |
-  to r5                                     ; $089F41 |
-  add   r5                                  ; $089F42 |
-  inc   r11                                 ; $089F43 |
-  with r11                                  ; $089F44 |
-  add   r11                                 ; $089F45 |
-  from r8                                   ; $089F46 |
-  and   #8                                  ; $089F47 |
-  bne CODE_089F4D                           ; $089F49 |
-  dec   r5                                  ; $089F4B |
-  inc   r5                                  ; $089F4C |
+.check_moving_X_onscreen
+  from r4                                   ; $089F1E |\
+  to r1                                     ; $089F1F | | [moving_platform_width]
+  add   #2                                  ; $089F20 | | r11 = third byte of moving table
+  ldb   (r1)                                ; $089F22 | | the width of the rectangle - 1
+  move  r11,r0                              ; $089F24 |/
+  to r6                                     ; $089F26 |\
+  add   #15                                 ; $089F27 | | [moving_width_plus_16]
+  inc   r6                                  ; $089F29 |/
+  ldb   (r4)                                ; $089F2A |\  if first byte of moving table, left x
+  sub   r3                                  ; $089F2C | | - cam_x_tile
+  move  r5,r0                               ; $089F2D | | [moving_camrel_x_tile] r5 = cache this
+  add   r11                                 ; $089F2F | | + moving_platform_width
+  cmp   r6                                  ; $089F30 | | <= moving_width_plus_16
+  beq .prep_moving_column                   ; $089F32 | | tests within 16 tiles of camera
+  nop                                       ; $089F34 | | so, onscreen check
+  bcs .moving_platforms_continue            ; $089F35 | | if so, run below else continue loop
+  nop                                       ; $089F37 |/
 
-CODE_089F4D:
-  from r4                                   ; $089F4D |
-  add   #5                                  ; $089F4E |
-  to r9                                     ; $089F50 |
-  ldb   (r0)                                ; $089F51 |
+.prep_moving_column
+  iwt   r0,#!s_opt_columns_gsu              ; $089F38 |\
+  ibt   r1,#$0020                           ; $089F3B | | [end_of_moving_column]
+  to r6                                     ; $089F3D | | r6 = $1FE2
+  add   r1                                  ; $089F3E |/
+  with r5                                   ; $089F3F |\  [moving_column_address]
+  add   r5                                  ; $089F40 | | r5 = moving_camrel_x_tile
+  to r5                                     ; $089F41 | | * 2
+  add   r5                                  ; $089F42 |/  + $1FC2 (rel moving col addr from rec left)
+  inc   r11                                 ; $089F43 |\  [moving_width_counter] init width count
+  with r11                                  ; $089F44 | | r11 = moving_platform_width + 1
+  add   r11                                 ; $089F45 |/  * 2 because 16 vs. 8 bit tiles
+  from r8                                   ; $089F46 |\  if high bit of camera X pixel
+  and   #8                                  ; $089F47 | | is on - this tests which 8-pixel
+  bne .load_moving_current_offset           ; $089F49 | | wide column we're in within the
+  dec   r5                                  ; $089F4B | | 16-pixel chunk. either go down 1 or
+  inc   r5                                  ; $089F4C |/  no change to columns depending
 
-CODE_089F53:
-  dec   r11                                 ; $089F53 |
-  bmi CODE_089F6B                           ; $089F54 |
-  nop                                       ; $089F56 |
-  iwt   r0,#$1FC1                           ; $089F57 |
-  cmp   r5                                  ; $089F5A |
-  beq CODE_089F62                           ; $089F5C |
-  nop                                       ; $089F5E |
-  bcs CODE_089F65                           ; $089F5F |
-  nop                                       ; $089F61 |
+.load_moving_current_offset
+  from r4                                   ; $089F4D |\
+  add   #5                                  ; $089F4E | | [moving_current_OPT_Y]
+  to r9                                     ; $089F50 | | r9 = sixth byte of moving table
+  ldb   (r0)                                ; $089F51 |/  the current OPT Y offset for this column
 
-CODE_089F62:
-  from r9                                   ; $089F62 |
-  stb   (r5)                                ; $089F63 |
+; at this point, nested loop from left to right X of rectangle
+; storing all moving columns that fall within the X bounds
+; we ignore if we are BEFORE the $1FC2 address of the table
+; and we exit loop upon reaching $1FE2, the end
 
-CODE_089F65:
-  from r5                                   ; $089F65 |
-  cmp   r6                                  ; $089F66 |
-  bcc CODE_089F53                           ; $089F68 |
-  inc   r5                                  ; $089F6A |
+; BUG_moving_column_bounds
+; this should have checked > 1FC1 because the check
+; aims to prevent corruption of anything outside of
+; 1FC2-1FE1, but instead it checks >= 1FC1, so it
+; DOES corrupt 1FC1, which is part of a different table
+.moving_column_loop
+  dec   r11                                 ; $089F53 |\  moving_column_loop exit condition:
+  bmi .moving_platforms_continue            ; $089F54 | | moving_width_counter has
+  nop                                       ; $089F56 |/  exceeded width
+  iwt   r0,#$1FC1                           ; $089F57 |\  BUG_moving_column_bounds
+  cmp   r5                                  ; $089F5A | | screen bounds check for moving column table
+  beq .store_moving_OPT_Y                   ; $089F5C | | if moving_column_address <= $1FC1
+  nop                                       ; $089F5E | | then don't corrupt non-1FC2~1FE1 memory
+  bcs .check_end_moving_column              ; $089F5F | | so ignore storing OPT value
+  nop                                       ; $089F61 |/  else store it
 
-CODE_089F6B:
-  with r4                                   ; $089F6B |
-  add   #6                                  ; $089F6C |
-  loop                                      ; $089F6E |
-  nop                                       ; $089F6F |
+.store_moving_OPT_Y
+  from r9                                   ; $089F62 |\ stores moving_current_OPT_Y
+  stb   (r5)                                ; $089F63 |/ into current slot in s_opt_columns_gsu
+
+.check_end_moving_column
+  from r5                                   ; $089F65 |\  another moving_column_loop exit condition:
+  cmp   r6                                  ; $089F66 | | if we've reached end_of_moving_column
+  bcc .moving_column_loop                   ; $089F68 | | which is right edge of screen,
+  inc   r5                                  ; $089F6A |/  don't continue, else nested loop
+; end moving_column_loop
+
+.moving_platforms_continue
+  with r4                                   ; $089F6B |\
+  add   #6                                  ; $089F6C | | go to next 6-byte entry of
+  loop                                      ; $089F6E | | s_opt_moving_platforms
+  nop                                       ; $089F6F |/  end moving_platforms_loop
+
+; this is where the moving platforms'
+; oscillation / actual motion is calculated
+.prep_moving_oscillation
   ibt   r0,#$0008                           ; $089F70 |
   romb                                      ; $089F72 |
-  lms   r1,($0000)                          ; $089F74 |
-  iwt   r0,#$01FE                           ; $089F77 |
-  and   r1                                  ; $089F7A |
-  iwt   r1,#$AC18                           ; $089F7B |
-  to r14                                    ; $089F7E |
-  add   r1                                  ; $089F7F |
-  getb                                      ; $089F80 |
-  inc   r14                                 ; $089F81 |
-  to r6                                     ; $089F82 |
-  getbh                                     ; $089F83 |
-  ibt   r12,#$0014                          ; $089F85 |
-  iwt   r0,#$449E                           ; $089F87 |
-  to r5                                     ; $089F8A |
-  add   #4                                  ; $089F8B |
+  lms   r1,($0000)                          ; $089F74 |\
+  iwt   r0,#$01FE                           ; $089F77 | |
+  and   r1                                  ; $089F7A | | [moving_sine_value]
+  iwt   r1,#sine_16                         ; $089F7B | | r6 = sin(wavy_time)
+  to r14                                    ; $089F7E | | sine lookup value
+  add   r1                                  ; $089F7F | | based on current time value
+  getb                                      ; $089F80 | | passed in (same var that wavy uses)
+  inc   r14                                 ; $089F81 | |
+  to r6                                     ; $089F82 | |
+  getbh                                     ; $089F83 |/
+  ibt   r12,#$0014                          ; $089F85 |\ loop 20 entries once
+  iwt   r0,#!s_opt_moving_platforms         ; $089F87 |/ again through moving table
+  to r5                                     ; $089F8A |\ [moving_amplitude_addr]
+  add   #4                                  ; $089F8B |/ address/slot of amplitude for this col
   move  r13,r15                             ; $089F8D |
-  move  r1,r5                               ; $089F8F |
-  ldb   (r1)                                ; $089F91 |
-  sex                                       ; $089F93 |
-  inc   r1                                  ; $089F94 |
-  lmult                                     ; $089F95 |
-  from r4                                   ; $089F97 |
-  hib                                       ; $089F98 |
-  sex                                       ; $089F99 |
-  stb   (r1)                                ; $089F9A |
-  with r5                                   ; $089F9C |
-  add   #6                                  ; $089F9D |
+
+.moving_oscillation_loop
+  move  r1,r5                               ; $089F8F |\  [moving_amplitude]
+  ldb   (r1)                                ; $089F91 | | load current column's amplitude from
+  sex                                       ; $089F93 |/  moving_amplitude_addr
+  inc   r1                                  ; $089F94 | go to sixth byte of moving platform entry
+  lmult                                     ; $089F95 | r0,r4 = moving_amplitude * moving_sine_value
+  from r4                                   ; $089F97 |\
+  hib                                       ; $089F98 | | high byte of low result
+  sex                                       ; $089F99 | | -> current OPT offset slot
+  stb   (r1)                                ; $089F9A |/  for moving platforms
+  with r5                                   ; $089F9C |\ next s_opt_moving_platforms
+  add   #6                                  ; $089F9D |/ entry
   loop                                      ; $089F9F |
-  nop                                       ; $089FA0 |
+  nop                                       ; $089FA0 | end moving_oscillation_loop
+
+; at this point, finally store the actual
+; OPT values in the OPT Y table
+; based on s_opt_columns_gsu values
+.prep_moving_store_OPT
   iwt   r2,#$1F30                           ; $089FA1 |
-  iwt   r5,#$1FC2                           ; $089FA4 |
-  iwt   r3,#$1EF0                           ; $089FA7 |
-  iwt   r0,#$2000                           ; $089FAA |
-  lms   r11,($0004)                         ; $089FAD |
-  to r11                                    ; $089FB0 |
-  or    r11                                 ; $089FB1 |
-  ibt   r12,#$0021                          ; $089FB2 |
-  move  r1,r12                              ; $089FB4 |
-  move  r13,r15                             ; $089FB6 |
-  ldb   (r5)                                ; $089FB8 |
-  sex                                       ; $089FBA |
-  beq CODE_089FCA                           ; $089FBB |
-  to r10                                    ; $089FBD |
-  add   r11                                 ; $089FBE |
-  from r1                                   ; $089FBF |
-  cmp   r12                                 ; $089FC0 |
-  bne CODE_089FC9                           ; $089FC2 |
-  from r10                                  ; $089FC4 |
-  stw   (r3)                                ; $089FC5 |
-  bra CODE_089FCA                           ; $089FC6 |
-  nop                                       ; $089FC8 |
+  iwt   r5,#!s_opt_columns_gsu              ; $089FA4 |
+  iwt   r3,#!s_opt_cam_y_gsu                ; $089FA7 |
+  iwt   r0,#$2000                           ; $089FAA |\
+  lms   r11,($0004)                         ; $089FAD | | [OPT_camera_y]
+  to r11                                    ; $089FB0 | | r11 = camera Y with BG1 OPT valid bit
+  or    r11                                 ; $089FB1 |/  flagged on
+  ibt   r12,#$0021                          ; $089FB2 |\  begin loop through s_opt_columns_gsu
+  move  r1,r12                              ; $089FB4 | | $21 times because one past end
+  move  r13,r15                             ; $089FB6 |/  is checked for later
 
-CODE_089FC9:
-  stw   (r2)                                ; $089FC9 |
+.moving_store_OPT_loop
+  ldb   (r5)                                ; $089FB8 |\  [moving_OPT_column_Y]
+  sex                                       ; $089FBA | | if current OPT column is just 0,
+  beq .moving_store_OPT_continue            ; $089FBB |/  continue
+  to r10                                    ; $089FBD |\ [moving_OPT_Y]
+  add   r11                                 ; $089FBE |/ r10 = OPT_camera_y + moving_OPT_column_Y
+  from r1                                   ; $089FBF |\
+  cmp   r12                                 ; $089FC0 | | if we are not yet on $21,
+  bne .moving_store_OPT_Y                   ; $089FC2 | | the final entry
+  from r10                                  ; $089FC4 |/
+  stw   (r3)                                ; $089FC5 |\  if we are, store moving_OPT_Y
+  bra .moving_store_OPT_continue            ; $089FC6 | | into $1EF0, the OPT camera Y
+  nop                                       ; $089FC8 |/  and exit loop
 
-CODE_089FCA:
-  inc   r2                                  ; $089FCA |
-  inc   r2                                  ; $089FCB |
-  loop                                      ; $089FCC |
-  inc   r5                                  ; $089FCD |
+.moving_store_OPT_Y
+  stw   (r2)                                ; $089FC9 | store the final OPT Y value
+
+.moving_store_OPT_continue
+  inc   r2                                  ; $089FCA |\
+  inc   r2                                  ; $089FCB | | next OPT slot
+  loop                                      ; $089FCC | | and next OPT columns slot
+  inc   r5                                  ; $089FCD |/  end moving_store_OPT_loop
   stop                                      ; $089FCE |
-  nop                                       ; $089FCF |
+  nop                                       ; $089FCF | end gsu_opt_moving_platforms
 
 ; freespace
   db $01, $01, $01, $01, $01, $01, $01, $01 ; $089FD0 |
@@ -6337,10 +6425,10 @@ CODE_089FCA:
   to r2                                     ; $08A010 |
   ldw   (r0)                                ; $08A011 |
   sms   ($0042),r2                          ; $08A012 |
-  iwt   r0,#$AC18                           ; $08A015 |
+  iwt   r0,#sine_16                         ; $08A015 |
   to r14                                    ; $08A018 |
   add   r1                                  ; $08A019 |
-  iwt   r0,#$AB98                           ; $08A01A |
+  iwt   r0,#cosine_16                       ; $08A01A |
   to r10                                    ; $08A01D |
   add   r1                                  ; $08A01E |
   getb                                      ; $08A01F |
@@ -6468,12 +6556,12 @@ CODE_08A0BE:
   iwt   r5,#$01FE                           ; $08A0C8 |
   with r4                                   ; $08A0CB |
   and   r5                                  ; $08A0CC |
-  iwt   r0,#$AC18                           ; $08A0CD |
+  iwt   r0,#sine_16                         ; $08A0CD |
   to r14                                    ; $08A0D0 |
   add   r4                                  ; $08A0D1 |
   to r3                                     ; $08A0D2 |
   add   r1                                  ; $08A0D3 |
-  iwt   r0,#$AB98                           ; $08A0D4 |
+  iwt   r0,#cosine_16                       ; $08A0D4 |
   to r7                                     ; $08A0D7 |
   add   r4                                  ; $08A0D8 |
   to r9                                     ; $08A0D9 |
@@ -6992,10 +7080,10 @@ CODE_08A362:
 
   ibt   r0,#$0008                           ; $08A377 |
   romb                                      ; $08A379 |
-  iwt   r0,#$AC18                           ; $08A37B |
+  iwt   r0,#sine_16                         ; $08A37B |
   to r14                                    ; $08A37E |
   add   r1                                  ; $08A37F |
-  iwt   r0,#$AB98                           ; $08A380 |
+  iwt   r0,#cosine_16                       ; $08A380 |
   to r9                                     ; $08A383 |
   add   r1                                  ; $08A384 |
   getb                                      ; $08A385 |
@@ -7260,8 +7348,8 @@ CODE_08A4C4:
   lms   r14,($005E)                         ; $08A54C | $A526 table
   lms   r6,($0050)                          ; $08A54F |
   getb                                      ; $08A552 |
-  lmult                                     ; $08A553 |\  lops off highest and lowest
-  with r4                                   ; $08A555 |
+  lmult                                     ; $08A553 |\
+  with r4                                   ; $08A555 | | lops off highest and lowest
   hib                                       ; $08A556 | | bytes of multiplication result
   lob                                       ; $08A557 | |
   swap                                      ; $08A558 | | two middle bytes of table val * x scale
@@ -7756,14 +7844,13 @@ CODE_08A7EB:
 ; returns:
 ; r0: x coordinate computed, r * cos(angle)
 ; r1: y coordinate computed, r * sin(angle)
-
   to r6                                     ; $08A81C | pass in a with to pass in a reg value
   ibt   r0,#$0008                           ; $08A81D |
   romb                                      ; $08A81F |
-  iwt   r0,#$AE58                           ; $08A821 |
+  iwt   r0,#sine_8                          ; $08A821 |
   to r14                                    ; $08A824 |
   add   r1                                  ; $08A825 | table index
-  iwt   r0,#$AE18                           ; $08A826 |
+  iwt   r0,#cosine_8                        ; $08A826 |
   to r2                                     ; $08A829 |
   add   r1                                  ; $08A82A | table index
   getbs                                     ; $08A82B | start with AE58, or sine
@@ -8444,7 +8531,7 @@ CODE_08AB07:
 
   lob                                       ; $08AB76 |
   add   r0                                  ; $08AB77 |
-  iwt   r14,#$AC18                          ; $08AB78 |
+  iwt   r14,#sine_16                        ; $08AB78 |
   to r14                                    ; $08AB7B |
   add   r14                                 ; $08AB7C |
   getb                                      ; $08AB7D |
@@ -8454,7 +8541,7 @@ CODE_08AB07:
   nop                                       ; $08AB82 |
   lob                                       ; $08AB83 |
   add   r0                                  ; $08AB84 |
-  iwt   r14,#$AB98                          ; $08AB85 |
+  iwt   r14,#cosine_16                      ; $08AB85 |
   to r14                                    ; $08AB88 |
   add   r14                                 ; $08AB89 |
   getb                                      ; $08AB8A |
@@ -8463,10 +8550,16 @@ CODE_08AB07:
   jmp   r11                                 ; $08AB8E |
   nop                                       ; $08AB8F |
 
+; fuzzy alignment table:
+; each value represents an 8-pixel column of X camera
+; and is used to shift / align both amplitude and
+; sine values into position
+fuzzy_alignment:
   db $08, $08, $08, $08                     ; $08AB90 |
   db $08, $08, $10, $10                     ; $08AB94 |
 
 ; 16-bit trig table: cosine starts
+cosine_16:
   dw $0100, $0100, $0100, $00FF             ; $08AB98 |
   dw $00FF, $00FE, $00FD, $00FC             ; $08ABA0 |
   dw $00FB, $00FA, $00F8, $00F7             ; $08ABA8 |
@@ -8483,7 +8576,8 @@ CODE_08AB07:
   dw $004A, $0044, $003E, $0038             ; $08AC00 |
   dw $0032, $002C, $0026, $001F             ; $08AC08 |
   dw $0019, $0013, $000D, $0006             ; $08AC10 |
-; sine starts here
+
+sine_16:
   dw $0000, $FFFA, $FFF3, $FFED             ; $08AC18 |
   dw $FFE7, $FFE1, $FFDA, $FFD4             ; $08AC20 |
   dw $FFCE, $FFC8, $FFC2, $FFBC             ; $08AC28 |
@@ -8550,6 +8644,7 @@ CODE_08AB07:
   dw $0019, $0013, $000D, $0006             ; $08AE10 |
 
 ; 8-bit trig table: cosine starts here
+cosine_8:
   db $40, $40, $40, $40, $40, $40, $3F, $3F ; $08AE18 |
   db $3F, $3E, $3E, $3E, $3D, $3D, $3C, $3C ; $08AE20 |
   db $3B, $3B, $3A, $39, $38, $38, $37, $36 ; $08AE28 |
@@ -8558,7 +8653,8 @@ CODE_08AB07:
   db $24, $22, $21, $20, $1E, $1D, $1B, $1A ; $08AE40 |
   db $18, $17, $16, $14, $13, $11, $10, $0E ; $08AE48 |
   db $0C, $0B, $09, $08, $06, $05, $03, $02 ; $08AE50 |
-; sine starts here
+
+sine_8:
   db $00, $FE, $FD, $FB, $FA, $F8, $F7, $F5 ; $08AE58 |
   db $F4, $F2, $F0, $EF, $ED, $EC, $EA, $E9 ; $08AE60 |
   db $E8, $E6, $E5, $E3, $E2, $E0, $DF, $DE ; $08AE68 |
@@ -8769,7 +8865,6 @@ CODE_08B22F:
   from r9                                   ; $08B25A |
   stb   (r4)                                ; $08B25B | high buffer byte = low byte of word 4
   bra CODE_08B271                           ; $08B25D |
-
   inc   r4                                  ; $08B25F | high buffer index forward
 
 ; copy to OAM slot (reverse index)
@@ -10216,37 +10311,46 @@ CODE_08BCD3:
   stop                                      ; $08BCDE |
   nop                                       ; $08BCDF |
 
+; takes a source graphic at $(0000) X, $(0002) Y
+; and plots a "masked" version of it at
+; a destination that's simply $40 rows beneath the source
+; the mask keeps source pixels every 7 across and 8 down
+; and all else is not plotted / ignored
+; parameters:
+; $700000: X coordinate of source and destination
+; $700002: Y coordinate of source (dest is this + $40)
+gsu_draw_cross_section_masked:
   cache                                     ; $08BCE0 |
-  ibt   r0,#$0001                           ; $08BCE1 |
-  cmode                                     ; $08BCE3 |
-  lm    r6,($0000)                          ; $08BCE5 |
-  lm    r3,($0002)                          ; $08BCE9 |
-  ibt   r5,#$0007                           ; $08BCED |
-  ibt   r0,#$0040                           ; $08BCEF |
-  to r4                                     ; $08BCF1 |
-  add   r3                                  ; $08BCF2 |
+  ibt   r0,#$0001                           ; $08BCE1 |\ transparent flag on
+  cmode                                     ; $08BCE3 |/
+  lm    r6,($0000)                          ; $08BCE5 | r6 = [plot_left_X]
+  lm    r3,($0002)                          ; $08BCE9 | r3 = [source_color_Y]
+  ibt   r5,#$0007                           ; $08BCED | # of rows to draw
+  ibt   r0,#$0040                           ; $08BCEF |\  [plot_dest_Y]
+  to r4                                     ; $08BCF1 | | r4 = source_color_Y + $40
+  add   r3                                  ; $08BCF2 |/
 
-CODE_08BCF3:
-  move  r1,r6                               ; $08BCF3 |
-  ibt   r12,#$0010                          ; $08BCF5 |
-  move  r13,r15                             ; $08BCF7 |
-  move  r2,r3                               ; $08BCF9 |
-  rpix                                      ; $08BCFB |
-  color                                     ; $08BCFD |
-  move  r2,r4                               ; $08BCFE |
-  plot                                      ; $08BD00 |
-  with r1                                   ; $08BD01 |
-  add   #7                                  ; $08BD02 |
-  loop                                      ; $08BD04 |
-  nop                                       ; $08BD05 |
-  with r3                                   ; $08BD06 |
-  add   #8                                  ; $08BD07 |
-  with r4                                   ; $08BD09 |
-  add   #8                                  ; $08BD0A |
-  move  r1,r6                               ; $08BD0C |
-  dec   r5                                  ; $08BD0E |
-  bpl CODE_08BCF3                           ; $08BD0F |
-  nop                                       ; $08BD11 |
+.loop
+  move  r1,r6                               ; $08BCF3 |\  reset X coord to plot_left_X
+  ibt   r12,#$0010                          ; $08BCF5 | | loop through row
+  move  r13,r15                             ; $08BCF7 |/  16 times
+  move  r2,r3                               ; $08BCF9 |\
+  rpix                                      ; $08BCFB | | grab color from source_color_Y
+  color                                     ; $08BCFD |/
+  move  r2,r4                               ; $08BCFE |\ plot this color in plot_dest_Y
+  plot                                      ; $08BD00 |/
+  with r1                                   ; $08BD01 |\ plot X += 7 (7 pixels across)
+  add   #7                                  ; $08BD02 |/
+  loop                                      ; $08BD04 |\ next pixel of this row
+  nop                                       ; $08BD05 |/
+  with r3                                   ; $08BD06 |\
+  add   #8                                  ; $08BD07 | | next Y row (8 pixels down) in
+  with r4                                   ; $08BD09 | | both source and dest
+  add   #8                                  ; $08BD0A |/
+  move  r1,r6                               ; $08BD0C | reset X coord to plot_left_X
+  dec   r5                                  ; $08BD0E |\
+  bpl .loop                                 ; $08BD0F | | loop to next row
+  nop                                       ; $08BD11 |/  end loop
   rpix                                      ; $08BD12 |
   stop                                      ; $08BD14 |
   nop                                       ; $08BD15 |
@@ -10594,7 +10698,7 @@ CODE_08BE76:
 CODE_08BEB7:
   ibt   r0,#$0008                           ; $08BEB7 |
   romb                                      ; $08BEB9 |
-  iwt   r0,#$AB98                           ; $08BEBB |
+  iwt   r0,#cosine_16                       ; $08BEBB |
   add   r4                                  ; $08BEBE |
   to r14                                    ; $08BEBF |
   add   r4                                  ; $08BEC0 |
@@ -10602,7 +10706,7 @@ CODE_08BEB7:
   inc   r14                                 ; $08BEC2 |
   getbh                                     ; $08BEC3 |
   move  r7,r0                               ; $08BEC5 |
-  iwt   r0,#$AC18                           ; $08BEC7 |
+  iwt   r0,#sine_16                         ; $08BEC7 |
   add   r4                                  ; $08BECA |
   to r14                                    ; $08BECB |
   add   r4                                  ; $08BECC |
@@ -10935,7 +11039,7 @@ CODE_08C058:
   from r2                                   ; $08C06B |
   to r6                                     ; $08C06C |
   swap                                      ; $08C06D |
-  iwt   r0,#$AB98                           ; $08C06E |
+  iwt   r0,#cosine_16                       ; $08C06E |
   to r14                                    ; $08C071 |
   add   r4                                  ; $08C072 |
   getb                                      ; $08C073 |
@@ -10944,7 +11048,7 @@ CODE_08C058:
   move  r7,r0                               ; $08C077 |
   to r5                                     ; $08C079 |
   fmult                                     ; $08C07A |
-  iwt   r0,#$AC18                           ; $08C07B |
+  iwt   r0,#sine_16                         ; $08C07B |
   to r14                                    ; $08C07E |
   add   r4                                  ; $08C07F |
   getb                                      ; $08C080 |
@@ -11560,7 +11664,7 @@ CODE_08C1C2:
   nop                                       ; $08C47D |
   ibt   r0,#$0008                           ; $08C47E |
   romb                                      ; $08C480 |
-  iwt   r0,#$AB98                           ; $08C482 |
+  iwt   r0,#cosine_16                       ; $08C482 |
   add   r3                                  ; $08C485 |
   to r14                                    ; $08C486 |
   add   r3                                  ; $08C487 |
@@ -11577,7 +11681,7 @@ CODE_08C494:
   from r1                                   ; $08C494 |
   lmult                                     ; $08C495 |
   move  r1,r4                               ; $08C497 |
-  iwt   r0,#$AC18                           ; $08C499 |
+  iwt   r0,#sine_16                         ; $08C499 |
   move  r11,r0                              ; $08C49C |
   add   r3                                  ; $08C49E |
   to r14                                    ; $08C49F |
@@ -12112,7 +12216,7 @@ CODE_08C743:
   lm    r0,($0CA0)                          ; $08C749 |
   to r11                                    ; $08C74D |
   add   r0                                  ; $08C74E |
-  iwt   r0,#$AB98                           ; $08C74F |
+  iwt   r0,#cosine_16                       ; $08C74F |
   to r14                                    ; $08C752 |
   add   r11                                 ; $08C753 |
   getb                                      ; $08C754 |
@@ -12126,7 +12230,7 @@ CODE_08C743:
   hib                                       ; $08C760 |
   to r1                                     ; $08C761 |
   or    r4                                  ; $08C762 |
-  iwt   r0,#$AC18                           ; $08C763 |
+  iwt   r0,#sine_16                         ; $08C763 |
   to r14                                    ; $08C766 |
   add   r11                                 ; $08C767 |
   getb                                      ; $08C768 |
@@ -12207,14 +12311,14 @@ CODE_08C743:
   lm    r0,($0CA0)                          ; $08C7CE |
   to r11                                    ; $08C7D2 |
   add   r0                                  ; $08C7D3 |
-  iwt   r0,#$AB98                           ; $08C7D4 |
+  iwt   r0,#cosine_16                       ; $08C7D4 |
   to r14                                    ; $08C7D7 |
   add   r11                                 ; $08C7D8 |
   getb                                      ; $08C7D9 |
   inc   r14                                 ; $08C7DA |
   getbh                                     ; $08C7DB |
   move  r1,r0                               ; $08C7DD |
-  iwt   r0,#$AC18                           ; $08C7DF |
+  iwt   r0,#sine_16                         ; $08C7DF |
   to r14                                    ; $08C7E2 |
   add   r11                                 ; $08C7E3 |
   getb                                      ; $08C7E4 |
@@ -13234,8 +13338,8 @@ CODE_08D394:
   add   #8                                  ; $08D418 |
   with r6                                   ; $08D41A |
   swap                                      ; $08D41B |
-  iwt   r8,#$AB98                           ; $08D41C |
-  iwt   r9,#$AC18                           ; $08D41F |
+  iwt   r8,#cosine_16                       ; $08D41C |
+  iwt   r9,#sine_16                         ; $08D41F |
   iwt   r10,#$1249                          ; $08D422 |
   with r2                                   ; $08D425 |
   swap                                      ; $08D426 |
@@ -13325,7 +13429,7 @@ CODE_08D394:
 CODE_08D495:
   ibt   r0,#$0008                           ; $08D495 |
   romb                                      ; $08D497 |
-  iwt   r0,#$AB98                           ; $08D499 |
+  iwt   r0,#cosine_16                       ; $08D499 |
   add   r4                                  ; $08D49C |
   to r14                                    ; $08D49D |
   add   r4                                  ; $08D49E |
@@ -13333,7 +13437,7 @@ CODE_08D495:
   inc   r14                                 ; $08D4A0 |
   getbh                                     ; $08D4A1 |
   move  r7,r0                               ; $08D4A3 |
-  iwt   r0,#$AC18                           ; $08D4A5 |
+  iwt   r0,#sine_16                         ; $08D4A5 |
   add   r4                                  ; $08D4A8 |
   to r14                                    ; $08D4A9 |
   add   r4                                  ; $08D4AA |
@@ -13597,11 +13701,11 @@ CODE_08D5E9:
   fmult                                     ; $08D5F2 |
   ibt   r0,#$0008                           ; $08D5F3 |
   romb                                      ; $08D5F5 |
-  iwt   r8,#$AE58                           ; $08D5F7 |
+  iwt   r8,#sine_8                          ; $08D5F7 |
   from r1                                   ; $08D5FA |
   to r14                                    ; $08D5FB |
   add   r8                                  ; $08D5FC |
-  iwt   r8,#$AE18                           ; $08D5FD |
+  iwt   r8,#cosine_8                        ; $08D5FD |
   from r1                                   ; $08D600 |
   to r10                                    ; $08D601 |
   add   r8                                  ; $08D602 |
@@ -13660,11 +13764,11 @@ CODE_08D641:
   swap                                      ; $08D649 |
   ibt   r0,#$0008                           ; $08D64A |
   romb                                      ; $08D64C |
-  iwt   r1,#$AC18                           ; $08D64E |
+  iwt   r1,#sine_16                         ; $08D64E |
   from r11                                  ; $08D651 |
   to r14                                    ; $08D652 |
   add   r1                                  ; $08D653 |
-  iwt   r1,#$AB98                           ; $08D654 |
+  iwt   r1,#cosine_16                       ; $08D654 |
   from r11                                  ; $08D657 |
   to r10                                    ; $08D658 |
   add   r1                                  ; $08D659 |
@@ -13735,11 +13839,11 @@ CODE_08D696:
   sms   ($002A),r0                          ; $08D6B5 |
   ibt   r0,#$0008                           ; $08D6B8 |
   romb                                      ; $08D6BA |
-  iwt   r1,#$AE58                           ; $08D6BC |
+  iwt   r1,#sine_8                          ; $08D6BC |
   from r5                                   ; $08D6BF |
   to r14                                    ; $08D6C0 |
   add   r1                                  ; $08D6C1 |
-  iwt   r1,#$AE18                           ; $08D6C2 |
+  iwt   r1,#cosine_8                        ; $08D6C2 |
   from r5                                   ; $08D6C5 |
   to r10                                    ; $08D6C6 |
   add   r1                                  ; $08D6C7 |
@@ -13770,11 +13874,11 @@ CODE_08D6E2:
   nop                                       ; $08D6EA |
   ibt   r0,#$0008                           ; $08D6EB |
   romb                                      ; $08D6ED |
-  iwt   r1,#$AE58                           ; $08D6EF |
+  iwt   r1,#sine_8                          ; $08D6EF |
   from r5                                   ; $08D6F2 |
   to r14                                    ; $08D6F3 |
   add   r1                                  ; $08D6F4 |
-  iwt   r1,#$AE18                           ; $08D6F5 |
+  iwt   r1,#cosine_8                        ; $08D6F5 |
   from r5                                   ; $08D6F8 |
   to r11                                    ; $08D6F9 |
   add   r1                                  ; $08D6FA |
@@ -14635,7 +14739,7 @@ CODE_08DCD4:
   cmp   r9                                  ; $08DD02 |
   bcs CODE_08DCC1                           ; $08DD04 |
   nop                                       ; $08DD06 |
-  iwt   r0,#$AC18                           ; $08DD07 |
+  iwt   r0,#sine_16                         ; $08DD07 |
   to r14                                    ; $08DD0A |
   add   r7                                  ; $08DD0B |
   getb                                      ; $08DD0C |
@@ -14736,7 +14840,7 @@ CODE_08DD69:
   moves r0,r5                               ; $08DD95 |
   beq CODE_08DDAD                           ; $08DD97 |
   nop                                       ; $08DD99 |
-  iwt   r0,#$AC18                           ; $08DD9A |
+  iwt   r0,#sine_16                         ; $08DD9A |
   to r14                                    ; $08DD9D |
   add   r11                                 ; $08DD9E |
   getb                                      ; $08DD9F |
@@ -14963,7 +15067,7 @@ CODE_08DEB7:
   sms   ($0000),r10                         ; $08DEBC |
   ibt   r0,#$0008                           ; $08DEBF |
   romb                                      ; $08DEC1 |
-  iwt   r0,#$AB98                           ; $08DEC3 |
+  iwt   r0,#cosine_16                       ; $08DEC3 |
   to r14                                    ; $08DEC6 |
   add   r2                                  ; $08DEC7 |
   getb                                      ; $08DEC8 |
@@ -15076,7 +15180,7 @@ CODE_08DF20:
   getbh                                     ; $08DF55 |
   ibt   r0,#$0008                           ; $08DF57 |
   romb                                      ; $08DF59 |
-  iwt   r0,#$AC18                           ; $08DF5B |
+  iwt   r0,#sine_16                         ; $08DF5B |
   to r14                                    ; $08DF5E |
   add   r7                                  ; $08DF5F |
   getb                                      ; $08DF60 |
@@ -15445,48 +15549,57 @@ CODE_08E10C:
   stop                                      ; $08E130 |
   nop                                       ; $08E131 |
 
-  ibt   r0,#$001F                           ; $08E132 |
-  to r3                                     ; $08E134 |
-  and   r1                                  ; $08E135 |
-  and   r2                                  ; $08E136 |
-  sub   r3                                  ; $08E137 |
-  lob                                       ; $08E138 |
-  swap                                      ; $08E139 |
-  fmult                                     ; $08E13A |
-  to r3                                     ; $08E13B |
-  add   r3                                  ; $08E13C |
-  iwt   r0,#$03E0                           ; $08E13D |
-  move  r7,r0                               ; $08E140 |
-  to r5                                     ; $08E142 |
-  and   r1                                  ; $08E143 |
-  and   r2                                  ; $08E144 |
-  sub   r5                                  ; $08E145 |
-  lmult                                     ; $08E146 |
-  with r4                                   ; $08E148 |
-  hib                                       ; $08E149 |
-  lob                                       ; $08E14A |
-  swap                                      ; $08E14B |
-  or    r4                                  ; $08E14C |
-  add   r5                                  ; $08E14D |
-  and   r7                                  ; $08E14E |
-  to r3                                     ; $08E14F |
-  or    r3                                  ; $08E150 |
-  iwt   r0,#$7C00                           ; $08E151 |
-  move  r7,r0                               ; $08E154 |
-  to r5                                     ; $08E156 |
-  and   r1                                  ; $08E157 |
-  and   r2                                  ; $08E158 |
-  sub   r5                                  ; $08E159 |
-  lmult                                     ; $08E15A |
-  with r4                                   ; $08E15C |
-  hib                                       ; $08E15D |
-  lob                                       ; $08E15E |
-  swap                                      ; $08E15F |
-  or    r4                                  ; $08E160 |
-  add   r5                                  ; $08E161 |
-  and   r7                                  ; $08E162 |
-  to r3                                     ; $08E163 |
-  or    r3                                  ; $08E164 |
+; lerps between two color points r1 and r2
+; handles blue, green, red channels separately (BGR)
+; parameters:
+; r1: [color_r1]
+; r2: [color_r2]
+; r6: [time]
+; returns:
+; r3: lerp'd color
+gsu_lerp_two_colors:
+  ibt   r0,#$001F                           ; $08E132 |\  [r1_red_channel]
+  to r3                                     ; $08E134 | | r3 = red component
+  and   r1                                  ; $08E135 |/  of color_r1
+  and   r2                                  ; $08E136 |\
+  sub   r3                                  ; $08E137 | | [lerp_red]
+  lob                                       ; $08E138 | | r3 = (red comp. of color_r2
+  swap                                      ; $08E139 | | - r1_red_channel)
+  fmult                                     ; $08E13A | | * time
+  to r3                                     ; $08E13B | | + r1_red_channel
+  add   r3                                  ; $08E13C |/  (this is a basic lerp equation)
+  iwt   r0,#$03E0                           ; $08E13D |\
+  move  r7,r0                               ; $08E140 | | [r1_green_channel]
+  to r5                                     ; $08E142 | | r5 = green component
+  and   r1                                  ; $08E143 |/  of color_r1
+  and   r2                                  ; $08E144 |\
+  sub   r5                                  ; $08E145 | | [lerp_greenred]
+  lmult                                     ; $08E146 | | r3 = (green comp. of color_r2
+  with r4                                   ; $08E148 | | - r1_green_channel)
+  hib                                       ; $08E149 | | * time
+  lob                                       ; $08E14A | | take middle two bytes of result
+  swap                                      ; $08E14B | | (lerp'd green)
+  or    r4                                  ; $08E14C | |
+  add   r5                                  ; $08E14D | | + r1_green_channel
+  and   r7                                  ; $08E14E | | & green mask
+  to r3                                     ; $08E14F | | | lerp_red
+  or    r3                                  ; $08E150 |/  gives you green & red lerp'd together
+  iwt   r0,#$7C00                           ; $08E151 |\
+  move  r7,r0                               ; $08E154 | | [r1_blue_channel]
+  to r5                                     ; $08E156 | | r5 = blue component
+  and   r1                                  ; $08E157 |/  of color_r1
+  and   r2                                  ; $08E158 |\
+  sub   r5                                  ; $08E159 | | [lerp_color]
+  lmult                                     ; $08E15A | | r3 = (blue comp. of color_r2
+  with r4                                   ; $08E15C | | - r1_blue_channel)
+  hib                                       ; $08E15D | | * time
+  lob                                       ; $08E15E | | take middle two bytes of result
+  swap                                      ; $08E15F | | (lerp'd blue)
+  or    r4                                  ; $08E160 | |
+  add   r5                                  ; $08E161 | | + r1_blue_channel
+  and   r7                                  ; $08E162 | | & blue mask
+  to r3                                     ; $08E163 | | | lerp_greenred
+  or    r3                                  ; $08E164 |/  gives you all 3 channels lerp'd & joined
   stop                                      ; $08E165 |
   nop                                       ; $08E166 |
 
@@ -15575,7 +15688,7 @@ CODE_08E10C:
   lms   r11,($003C)                         ; $08E1D9 |
   from r10                                  ; $08E1DC |
   hib                                       ; $08E1DD |
-  iwt   r14,#$AE18                          ; $08E1DE |
+  iwt   r14,#cosine_8                       ; $08E1DE |
   to r14                                    ; $08E1E1 |
   add   r14                                 ; $08E1E2 |
   iwt   r0,#$1999                           ; $08E1E3 |
@@ -15978,7 +16091,7 @@ CODE_08E3B3:
   lob                                       ; $08E3E8 |
   lms   r5,($000A)                          ; $08E3E9 |
   lms   r3,($0008)                          ; $08E3EC |
-  iwt   r2,#$AE58                           ; $08E3EF |
+  iwt   r2,#sine_8                          ; $08E3EF |
   from r2                                   ; $08E3F2 |
   to r14                                    ; $08E3F3 |
   add   r10                                 ; $08E3F4 |
@@ -16054,14 +16167,14 @@ CODE_08E435:
   add   r3                                  ; $08E449 |
   ibt   r0,#$0008                           ; $08E44A |
   romb                                      ; $08E44C |
-  iwt   r0,#$AC18                           ; $08E44E |
+  iwt   r0,#sine_16                         ; $08E44E |
   to r14                                    ; $08E451 |
   add   r5                                  ; $08E452 |
   getb                                      ; $08E453 |
   inc   r14                                 ; $08E454 |
   getbh                                     ; $08E455 |
   move  r7,r0                               ; $08E457 |
-  iwt   r0,#$AB98                           ; $08E459 |
+  iwt   r0,#cosine_16                       ; $08E459 |
   to r14                                    ; $08E45C |
   add   r5                                  ; $08E45D |
   getb                                      ; $08E45E |
@@ -17437,6 +17550,8 @@ CODE_08EB9B:
   stop                                      ; $08EBB3 |
   nop                                       ; $08EBB4 |
 
+; Sun BG3 init routine called during level loading
+; Writes to HDMA gradient table
   romb                                      ; $08EBB5 |
   iwt   r10,#$59B6                          ; $08EBB7 |
   iwt   r11,#$5800                          ; $08EBBA |
@@ -17640,6 +17755,7 @@ CODE_08EC6F:
   nop                                       ; $08ECEC |
   stop                                      ; $08ECED |
   nop                                       ; $08ECEE |
+
   ibt   r4,#$0000                           ; $08ECEF |
   iwt   r3,#$0100                           ; $08ECF1 |
   moves r1,r1                               ; $08ECF4 |
@@ -18526,7 +18642,7 @@ CODE_08F165:
   ibt   r0,#$0008                           ; $08F171 |
   romb                                      ; $08F173 |
   ibt   r6,#$0010                           ; $08F175 |
-  iwt   r13,#$AE18                          ; $08F177 |
+  iwt   r13,#cosine_8                       ; $08F177 |
   from r13                                  ; $08F17A |
   to r14                                    ; $08F17B |
   add   r2                                  ; $08F17C |
@@ -18541,7 +18657,7 @@ CODE_08F165:
   move  r7,r0                               ; $08F18A |
   mult  r6                                  ; $08F18C |
   sms   ($0004),r0                          ; $08F18D |
-  iwt   r13,#$AE58                          ; $08F190 |
+  iwt   r13,#sine_8                         ; $08F190 |
   from r13                                  ; $08F193 |
   to r14                                    ; $08F194 |
   add   r2                                  ; $08F195 |

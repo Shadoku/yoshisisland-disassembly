@@ -2970,7 +2970,13 @@ CODE_0A91DC:
   stop                                      ; $0A921E |
   nop                                       ; $0A921F |
 
-; sprite clipping table (8 bytes per clipping type)
+; sprite hitbox table, indexed by first 5 bits of $0A9320 table
+; 4 word entries
+; Word 1: X offset for hitbox center
+; Word 2: Y offset for hitbox center
+; Word 3: Width of hitbox from center (both sides)
+; Word 4: Height of hitbox from center (top & bottom)
+sprite_hitbox_settings:
   db $08, $00, $08, $00, $06, $00, $06, $00 ; $0A9220 |
   db $08, $00, $08, $00, $07, $00, $0C, $00 ; $0A9228 |
   db $08, $00, $08, $00, $0C, $00, $0C, $00 ; $0A9230 |
@@ -3004,7 +3010,10 @@ CODE_0A91DC:
   db $08, $00, $09, $00, $08, $00, $0A, $00 ; $0A9310 |
   db $08, $00, $0C, $00, $0C, $00, $0C, $00 ; $0A9318 |
 
-; some sprite table (bit 8 makes sprites inedible if set)
+; sprite table (bit 8 makes sprites inedible if set)
+; A bunch of bitwise settings, mostly behavior related
+; byte 1: 000h hhhh
+; h = hitbox index for $0A9220 table
   dw $0040, $0060, $0060, $0062             ; $0A9320 |
   dw $0060, $8420, $0262, $8420             ; $0A9328 |
   dw $0060, $8420, $7660, $68A0             ; $0A9330 |
@@ -3138,6 +3147,7 @@ CODE_0A91DC:
   dw $FFFF, $FFFF, $FFFF                    ; $0A9718 |
 
 ; sprite table (determines if sprites stay on ledges?)
+; A bunch of bitwise settings, mostly terrain related
   dw $4484, $4008, $2000, $4003             ; $0A971E |
   dw $4000, $60A0, $2040, $60A0             ; $0A9726 |
   dw $2000, $60A0, $0959, $2021             ; $0A972E |
@@ -3267,7 +3277,16 @@ CODE_0A91DC:
   dw $FFFF, $FFFF, $FFFF, $FFFF             ; $0A9B0E |
   dw $FFFF, $FFFF, $FFFF                    ; $0A9B16 |
 
-; sprite table: feeds into $7040,x
+; sprite table OAM mirrors and bitflags, two byte entries
+; indexed by sprite ID
+; Byte 1: sf?bddmm
+;   s = automatic swallow 
+;   f = can be frozen
+;   b = can be burned by flame
+;   d = Index into despawning x,y threshold table (00 means no despawning)
+;   m = drawing method index
+; byte 2: Count/# of bytes taken up in OAM buffer
+sprite_oam_misc_flags:
   dw $2009, $2005, $2001, $2005             ; $0A9B1C |
   dw $0804, $0904, $0904, $0904             ; $0A9B24 |
   dw $0004, $0904, $3055, $0804             ; $0A9B2C |
@@ -3400,7 +3419,11 @@ CODE_0A91DC:
   dw $FFFF, $FFFF, $FFFF, $FFFF             ; $0A9F0C |
   dw $FFFF, $FFFF, $FFFF                    ; $0A9F14 |
 
-; sprite table (graphics-related; byte 2 is palette attributes in YXPPCCCT format)
+; sprite table OAM mirrors, two byte entries
+; indexed by sprite ID
+; byte 1: priority flags in 00pp0000
+; byte 2: palette and flip attributes in YX00CCC0 format
+sprite_oam_attributes:
   dw $0805, $0007, $0C02, $0805             ; $0A9F1A |
   dw $0201, $0604, $1202, $0004             ; $0A9F22 |
   dw $2C07, $0204, $0005, $0002             ; $0A9F2A |
@@ -3533,10 +3556,12 @@ CODE_0A91DC:
   dw $FFFF, $FFFF, $FFFF, $FFFF             ; $0AA30A |
   dw $FFFF, $FFFF, $FFFF                    ; $0AA312 |
 
-; sprite table (sprite gravity)
-; pairs of bytes
-; first goes in 7542,x table
-; second goes in 75E2,x table
+; Sprite Table Gravity table
+; indexed by sprite ID
+; byte 1: Y-acceleration (Gravity)
+; byte 2: Y-acceleration ceiling (max speed for acceleration)
+; Acceleration ceiling are stored as divided by 16
+sprite_y_accel:
   db $10, $40, $60, $60, $00, $00, $40, $40 ; $0AA318 |
   db $70, $40, $00, $40, $10, $04, $00, $40 ; $0AA320 |
   db $00, $00, $00, $40, $40, $40, $40, $40 ; $0AA328 |
@@ -3669,7 +3694,10 @@ CODE_0A91DC:
   db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF ; $0AA70C |
   db $FF, $FF                               ; $0AA714 |
 
-; sprite table (GFX file to use)
+; 1 Word entries: Spriteset Graphics File
+; Indexed by sprite ID
+; $0000 means either global sprites or GSU drawn
+sprite_gfx_file:
   dw $0000, $0000, $005A, $0000             ; $0AA716 |
   dw $0000, $0000, $0000, $0000             ; $0AA71E |
   dw $0000, $0000, $004A, $004A             ; $0AA726 |
@@ -4319,71 +4347,190 @@ CODE_0A91DC:
   dw $FFFF, $FFFF, $FFFF, $FFFF             ; $0ABB02 |
   dw $FFFF, $FFFF, $FFFF, $FFFF             ; $0ABB0A |
 
-  dw $0000, $0200, $0000, $0804             ; $0ABB12 |
-  dw $0400, $0108, $0000, $0400             ; $0ABB1A |
-  dw $0208, $0804, $0003, $0000             ; $0ABB22 |
-  dw $0804, $0004, $0000, $0804             ; $0ABB2A |
-  dw $0005, $0000, $0804, $0406             ; $0ABB32 |
-  dw $0708, $0000, $0400, $0808             ; $0ABB3A |
-  dw $0804, $0009, $0000, $0000             ; $0ABB42 |
-  dw $0000, $0000, $0009, $0100             ; $0ABB4A |
-  dw $0000, $0008, $0000, $0000             ; $0ABB52 |
-  dw $0100, $2000, $0000, $4002             ; $0ABB5A |
-  dw $0200, $0040, $4002, $2000             ; $0ABB62 |
-  dw $0000, $4801, $0000, $0048             ; $0ABB6A |
-  dw $4800, $0000, $0048, $4800             ; $0ABB72 |
-  dw $0000, $0048, $4800, $0000             ; $0ABB7A |
-  dw $0048, $4800, $0000, $0048             ; $0ABB82 |
-  dw $4800, $0200, $00D8, $0000             ; $0ABB8A |
-  dw $0400, $0A00, $0004, $040B             ; $0ABB92 |
-  dw $0C00, $0000, $0400, $0D00             ; $0ABB9A |
-  dw $0004, $040E, $0F00, $0000             ; $0ABBA2 |
-  dw $0400, $1000, $0000, $0400             ; $0ABBAA |
-  dw $1100, $0000, $0100, $0010             ; $0ABBB2 |
-  dw $0001, $0200, $0000, $0802             ; $0ABBBA |
-  dw $0000, $0000, $0000, $0000             ; $0ABBC2 |
-  dw $0000, $0002, $2100, $0000             ; $0ABBCA |
-  dw $0024, $2406, $0700, $0000             ; $0ABBD2 |
-  dw $0000, $0000, $0024, $2408             ; $0ABBDA |
-  dw $0900, $0000, $0000, $0000             ; $0ABBE2 |
-  dw $0024, $2400, $0100, $0002             ; $0ABBEA |
-  dw $2400, $0200, $0024, $0203             ; $0ABBF2 |
-  dw $0000, $0024, $0004, $0000             ; $0ABBFA |
-  dw $0024, $0005, $0000, $0002             ; $0ABC02 |
-  dw $2500, $1200, $0002, $2500             ; $0ABC0A |
-  dw $1300, $0002, $2500, $1400             ; $0ABC12 |
-  dw $0002, $2500, $1500, $0002             ; $0ABC1A |
-  dw $2500, $1600, $0002, $2500             ; $0ABC22 |
-  dw $1700, $4800, $0200, $0038             ; $0ABC2A |
-  dw $3000, $0200, $0018, $0000             ; $0ABC32 |
-  dw $0000, $0000, $0002, $0000             ; $0ABC3A |
-  dw $0000, $6004, $0418, $1968             ; $0ABC42 |
-  dw $0020, $2000, $0000, $0000             ; $0ABC4A |
-  dw $0200, $0058, $C804, $001A             ; $0ABC52 |
-  dw $0000, $0002, $0200, $0000             ; $0ABC5A |
-  dw $0020, $2000, $0000, $7002             ; $0ABC62 |
-  dw $0000, $0078, $B000, $0100             ; $0ABC6A |
-  dw $0088, $9001, $0000, $0000             ; $0ABC72 |
-  dw $9802, $0200, $0000, $0002             ; $0ABC7A |
-  dw $0200, $0000, $D802, $0200             ; $0ABC82 |
-  dw $00A0, $2818, $0400, $0498             ; $0ABC8A |
-  dw $9804, $0005, $0098, $9802             ; $0ABC92 |
-  dw $0200, $0098, $0000, $0000             ; $0ABC9A |
-  dw $0000, $0004, $001B, $0000             ; $0ABCA2 |
-  dw $0002, $0200, $00B8, $8000             ; $0ABCAA |
-  dw $0000, $00A8, $B802, $0000             ; $0ABCB2 |
-  dw $0000, $D002, $0100, $00C0             ; $0ABCBA |
-  dw $0002, $1800, $0000, $0000             ; $0ABCC2 |
-  dw $0200, $0020, $2004, $0404             ; $0ABCCA |
-  dw $0520, $0000, $0C00, $0400             ; $0ABCD2 |
-  dw $000C, $0005, $0000, $0001             ; $0ABCDA |
-  dw $0000, $0000, $0002, $0200             ; $0ABCE2 |
-  dw $0000, $0000, $2500, $1C00             ; $0ABCEA |
-  dw $0025, $251D, $1E00, $0025             ; $0ABCF2 |
-  dw $021F, $0058, $3000, $0000             ; $0ABCFA |
-  dw $0000, $2802, $0000, $0000             ; $0ABD02 |
-  dw $80C0, $0F2D                           ; $0ABD0A |
+; MAP16 page information table
+; 3 byte entries, each one is a MAP16 page
+; byte 1: collision/clip bitflags:
+; $01: ground only (like brown/red platform)
+; $02: solid block
+; $04: slope (byte 3 controls what kind)
+; $08: water physics (eggs skip off this)
+; $10: lava physics (doesn't affect Yoshi but sprites move slow through it)
+; $20: cross-section wall flag
+; $40: unused
+; $80: unused
+; byte 2: special properties
+; byte 3: slope direction & angle
+MAP16_page_info:
+  db $00, $00, $00                          ; $0ABB12 | page $00
+  db $02, $00, $00                          ; $0ABB15 | page $01
+  db $04, $08, $00                          ; $0ABB18 | page $02
+  db $04, $08, $01                          ; $0ABB1B | page $03
+  db $00, $00, $00                          ; $0ABB1E | page $04
+  db $04, $08, $02                          ; $0ABB21 | page $05
+  db $04, $08, $03                          ; $0ABB24 | page $06
+  db $00, $00, $00                          ; $0ABB27 | page $07
+  db $04, $08, $04                          ; $0ABB2A | page $08
+  db $00, $00, $00                          ; $0ABB2D | page $09
+  db $04, $08, $05                          ; $0ABB30 | page $0A
+  db $00, $00, $00                          ; $0ABB33 | page $0B
+  db $04, $08, $06                          ; $0ABB36 | page $0C
+  db $04, $08, $07                          ; $0ABB39 | page $0D
+  db $00, $00, $00                          ; $0ABB3C | page $0E
+  db $04, $08, $08                          ; $0ABB3F | page $0F
+  db $04, $08, $09                          ; $0ABB42 | page $10
+  db $00, $00, $00                          ; $0ABB45 | page $11
+  db $00, $00, $00                          ; $0ABB48 | page $12
+  db $00, $00, $00                          ; $0ABB4B | page $13
+  db $09, $00, $00                          ; $0ABB4E | page $14
+  db $01, $00, $00                          ; $0ABB51 | page $15
+  db $08, $00, $00                          ; $0ABB54 | page $16
+  db $00, $00, $00                          ; $0ABB57 | page $17
+  db $00, $01, $00                          ; $0ABB5A | page $18
+  db $20, $00, $00                          ; $0ABB5D | page $19
+  db $02, $40, $00                          ; $0ABB60 | page $1A
+  db $02, $40, $00                          ; $0ABB63 | page $1B
+  db $02, $40, $00                          ; $0ABB66 | page $1C
+  db $20, $00, $00                          ; $0ABB69 | page $1D
+  db $01, $48, $00                          ; $0ABB6C | page $1E
+  db $00, $48, $00                          ; $0ABB6F | page $1F
+  db $00, $48, $00                          ; $0ABB72 | page $20
+  db $00, $48, $00                          ; $0ABB75 | page $21
+  db $00, $48, $00                          ; $0ABB78 | page $22
+  db $00, $48, $00                          ; $0ABB7B | page $23
+  db $00, $48, $00                          ; $0ABB7E | page $24
+  db $00, $48, $00                          ; $0ABB81 | page $25
+  db $00, $48, $00                          ; $0ABB84 | page $26
+  db $00, $48, $00                          ; $0ABB87 | page $27
+  db $00, $48, $00                          ; $0ABB8A | page $28
+  db $02, $D8, $00                          ; $0ABB8D | page $29
+  db $00, $00, $00                          ; $0ABB90 | page $2A
+  db $04, $00, $0A                          ; $0ABB93 | page $2B
+  db $04, $00, $0B                          ; $0ABB96 | page $2C
+  db $04, $00, $0C                          ; $0ABB99 | page $2D
+  db $00, $00, $00                          ; $0ABB9C | page $2E
+  db $04, $00, $0D                          ; $0ABB9F | page $2F
+  db $04, $00, $0E                          ; $0ABBA2 | page $30
+  db $04, $00, $0F                          ; $0ABBA5 | page $31
+  db $00, $00, $00                          ; $0ABBA8 | page $32
+  db $04, $00, $10                          ; $0ABBAB | page $33
+  db $00, $00, $00                          ; $0ABBAE | page $34
+  db $04, $00, $11                          ; $0ABBB1 | page $35
+  db $00, $00, $00                          ; $0ABBB4 | page $36
+  db $01, $10, $00                          ; $0ABBB7 | page $37
+  db $01, $00, $00                          ; $0ABBBA | page $38
+  db $02, $00, $00                          ; $0ABBBD | page $39
+  db $02, $08, $00                          ; $0ABBC0 | page $3A
+  db $00, $00, $00                          ; $0ABBC3 | page $3B
+  db $00, $00, $00                          ; $0ABBC6 | page $3C
+  db $00, $00, $00                          ; $0ABBC9 | page $3D
+  db $02, $00, $00                          ; $0ABBCC | page $3E
+  db $21, $00, $00                          ; $0ABBCF | page $3F
+  db $24, $00, $06                          ; $0ABBD2 | page $40
+  db $24, $00, $07                          ; $0ABBD5 | page $41
+  db $00, $00, $00                          ; $0ABBD8 | page $42
+  db $00, $00, $00                          ; $0ABBDB | page $43
+  db $24, $00, $08                          ; $0ABBDE | page $44
+  db $24, $00, $09                          ; $0ABBE1 | page $45
+  db $00, $00, $00                          ; $0ABBE4 | page $46
+  db $00, $00, $00                          ; $0ABBE7 | page $47
+  db $24, $00, $00                          ; $0ABBEA | page $48
+  db $24, $00, $01                          ; $0ABBED | page $49
+  db $02, $00, $00                          ; $0ABBF0 | page $4A
+  db $24, $00, $02                          ; $0ABBF3 | page $4B
+  db $24, $00, $03                          ; $0ABBF6 | page $4C
+  db $02, $00, $00                          ; $0ABBF9 | page $4D
+  db $24, $00, $04                          ; $0ABBFC | page $4E
+  db $00, $00, $00                          ; $0ABBFF | page $4F
+  db $24, $00, $05                          ; $0ABC02 | page $50
+  db $00, $00, $00                          ; $0ABC05 | page $51
+  db $02, $00, $00                          ; $0ABC08 | page $52
+  db $25, $00, $12                          ; $0ABC0B | page $53
+  db $02, $00, $00                          ; $0ABC0E | page $54
+  db $25, $00, $13                          ; $0ABC11 | page $55
+  db $02, $00, $00                          ; $0ABC14 | page $56
+  db $25, $00, $14                          ; $0ABC17 | page $57
+  db $02, $00, $00                          ; $0ABC1A | page $58
+  db $25, $00, $15                          ; $0ABC1D | page $59
+  db $02, $00, $00                          ; $0ABC20 | page $5A
+  db $25, $00, $16                          ; $0ABC23 | page $5B
+  db $02, $00, $00                          ; $0ABC26 | page $5C
+  db $25, $00, $17                          ; $0ABC29 | page $5D
+  db $00, $48, $00                          ; $0ABC2C | page $5E
+  db $02, $38, $00                          ; $0ABC2F | page $5F
+  db $00, $30, $00                          ; $0ABC32 | page $60
+  db $02, $18, $00                          ; $0ABC35 | page $61
+  db $00, $00, $00                          ; $0ABC38 | page $62
+  db $00, $00, $00                          ; $0ABC3B | page $63
+  db $02, $00, $00                          ; $0ABC3E | page $64
+  db $00, $00, $00                          ; $0ABC41 | page $65
+  db $04, $60, $18                          ; $0ABC44 | page $66
+  db $04, $68, $19                          ; $0ABC47 | page $67
+  db $20, $00, $00                          ; $0ABC4A | page $68
+  db $20, $00, $00                          ; $0ABC4D | page $69
+  db $00, $00, $00                          ; $0ABC50 | page $6A
+  db $02, $58, $00                          ; $0ABC53 | page $6B
+  db $04, $C8, $1A                          ; $0ABC56 | page $6C
+  db $00, $00, $00                          ; $0ABC59 | page $6D
+  db $02, $00, $00                          ; $0ABC5C | page $6E
+  db $02, $00, $00                          ; $0ABC5F | page $6F
+  db $20, $00, $00                          ; $0ABC62 | page $70
+  db $20, $00, $00                          ; $0ABC65 | page $71
+  db $02, $70, $00                          ; $0ABC68 | page $72
+  db $00, $78, $00                          ; $0ABC6B | page $73
+  db $00, $B0, $00                          ; $0ABC6E | page $74
+  db $01, $88, $00                          ; $0ABC71 | page $75
+  db $01, $90, $00                          ; $0ABC74 | page $76
+  db $00, $00, $00                          ; $0ABC77 | page $77
+  db $02, $98, $00                          ; $0ABC7A | page $78
+  db $02, $00, $00                          ; $0ABC7D | page $79
+  db $02, $00, $00                          ; $0ABC80 | page $7A
+  db $02, $00, $00                          ; $0ABC83 | page $7B
+  db $02, $D8, $00                          ; $0ABC86 | page $7C
+  db $02, $A0, $00                          ; $0ABC89 | page $7D
+  db $18, $28, $00                          ; $0ABC8C | page $7E
+  db $04, $98, $04                          ; $0ABC8F | page $7F
+  db $04, $98, $05                          ; $0ABC92 | page $80
+  db $00, $98, $00                          ; $0ABC95 | page $81
+  db $02, $98, $00                          ; $0ABC98 | page $82
+  db $02, $98, $00                          ; $0ABC9B | page $83
+  db $00, $00, $00                          ; $0ABC9E | page $84
+  db $00, $00, $00                          ; $0ABCA1 | page $85
+  db $04, $00, $1B                          ; $0ABCA4 | page $86
+  db $00, $00, $00                          ; $0ABCA7 | page $87
+  db $02, $00, $00                          ; $0ABCAA | page $88
+  db $02, $B8, $00                          ; $0ABCAD | page $89
+  db $00, $80, $00                          ; $0ABCB0 | page $8A
+  db $00, $A8, $00                          ; $0ABCB3 | page $8B
+  db $02, $B8, $00                          ; $0ABCB6 | page $8C
+  db $00, $00, $00                          ; $0ABCB9 | page $8D
+  db $02, $D0, $00                          ; $0ABCBC | page $8E
+  db $01, $C0, $00                          ; $0ABCBF | page $8F
+  db $02, $00, $00                          ; $0ABCC2 | page $90
+  db $18, $00, $00                          ; $0ABCC5 | page $91
+  db $00, $00, $00                          ; $0ABCC8 | page $92
+  db $02, $20, $00                          ; $0ABCCB | page $93
+  db $04, $20, $04                          ; $0ABCCE | page $94
+  db $04, $20, $05                          ; $0ABCD1 | page $95
+  db $00, $00, $00                          ; $0ABCD4 | page $96
+  db $0C, $00, $04                          ; $0ABCD7 | page $97
+  db $0C, $00, $05                          ; $0ABCDA | page $98
+  db $00, $00, $00                          ; $0ABCDD | page $99
+  db $01, $00, $00                          ; $0ABCE0 | page $9A
+  db $00, $00, $00                          ; $0ABCE3 | page $9B
+  db $02, $00, $00                          ; $0ABCE6 | page $9C
+  db $02, $00, $00                          ; $0ABCE9 | page $9D
+  db $00, $00, $00                          ; $0ABCEC | page $9E
+  db $25, $00, $1C                          ; $0ABCEF | page $9F
+  db $25, $00, $1D                          ; $0ABCF2 | page $A0
+  db $25, $00, $1E                          ; $0ABCF5 | page $A1
+  db $25, $00, $1F                          ; $0ABCF8 | page $A2
+  db $02, $58, $00                          ; $0ABCFB | page $A3
+  db $00, $30, $00                          ; $0ABCFE | page $A4
+  db $00, $00, $00                          ; $0ABD01 | page $A5
+  db $02, $28, $00                          ; $0ABD04 | page $A6
+  db $00, $00, $00                          ; $0ABD07 | page $A7
 
+  dw $80C0, $0F2D                           ; $0ABD0A |
   dw $1F00, $1E2D, $80C0, $0F2D             ; $0ABD0E |
   dw $1F00, $1C2D, $80C0, $0E2D             ; $0ABD16 |
   dw $1F00, $1A2D, $80C0, $0E2D             ; $0ABD1E |
@@ -9967,8 +10114,14 @@ CODE_0AEA72:
   stop                                      ; $0AEA72 |
   nop                                       ; $0AEA73 |
 
+; the noise loop to play for each form of
+; player, follows same order as $7000AE
+; one byte per
+player_noise_loops:
   db $00, $44, $84, $04, $00, $00, $64, $00 ; $0AEA74 |
-  db $00, $00, $21, $00, $22, $00, $23, $00 ; $0AEA7C |
+  db $00, $00                               ; $0AEA7C |
+
+  db $21, $00, $22, $00, $23, $00           ; $0AEA7E |
   db $24, $00, $25, $00, $26, $00, $27, $00 ; $0AEA84 |
   db $27, $00, $28, $00, $29, $00, $2A, $00 ; $0AEA8C |
   db $29, $00, $28, $00, $03, $00, $02, $00 ; $0AEA94 |
@@ -9986,13 +10139,29 @@ CODE_0AEA72:
   db $9D, $00, $9D, $00, $9D, $00, $9E, $00 ; $0AEAF4 |
   db $0F, $08, $07, $06, $07, $04, $07, $04 ; $0AEAFC |
   db $03, $04, $03, $04, $01, $04, $01, $04 ; $0AEB04 |
-  db $00, $04, $01, $09, $01, $17, $0F, $09 ; $0AEB0C |
-  db $0F, $17, $06, $04, $0A, $04, $03, $20 ; $0AEB14 |
-  db $08, $20, $0D, $20, $01, $16, $01, $17 ; $0AEB1C |
-  db $0F, $16, $0F, $17, $06, $10, $0A, $10 ; $0AEB24 |
-  db $03, $20, $08, $20, $0D, $20, $01, $0C ; $0AEB2C |
-  db $01, $16, $0F, $0C, $0F, $16, $06, $04 ; $0AEB34 |
-  db $0A, $04, $03, $20, $08, $20, $0D, $20 ; $0AEB3C |
+  db $00, $04
+
+; player part terrain collision offsets
+; indexed as follows:
+; top left, top center, top right
+; mid left, center, mid right
+; bottom left, bottom center, bottom right
+; each pair is an X,Y offset for terrain collision
+player_part_terrain_regular:
+  db $01, $09, $01, $17, $0F, $09, $0F, $17 ; $0AEB0E |
+  db $06, $04, $0A, $04, $03, $20, $08, $20 ; $0AEB16 |
+  db $0D, $20                               ; $0AEB1E |
+
+player_part_terrain_ducking:
+  db $01, $16, $01, $17, $0F, $16, $0F, $17 ; $0AEB20 |
+  db $06, $10, $0A, $10, $03, $20, $08, $20 ; $0AEB28 |
+  db $0D, $20                               ; $0AEB30 |
+
+player_part_terrain_swimming:
+  db $01, $0C, $01, $16, $0F, $0C, $0F, $16 ; $0AEB32 |
+  db $06, $04, $0A, $04, $03, $20, $08, $20 ; $0AEB3A |
+  db $0D, $20                               ; $0AEB42 |
+
   db $01, $14, $01, $16, $0F, $14, $0F, $16 ; $0AEB44 |
   db $06, $10, $0A, $10, $03, $20, $08, $20 ; $0AEB4C |
   db $0D, $20, $F3, $F8, $F3, $00, $0C, $F8 ; $0AEB54 |
@@ -10008,6 +10177,7 @@ CODE_0AEA72:
   db $03, $20, $08, $20, $0D, $20, $FE, $08 ; $0AEBA4 |
   db $FE, $16, $12, $08, $12, $16, $02, $04 ; $0AEBAC |
   db $0E, $04, $00, $20, $08, $20, $10, $20 ; $0AEBB4 |
+
   db $00, $01, $04, $84, $00, $02, $08, $88 ; $0AEBBC |
   db $04, $84, $08, $88, $40, $40, $40, $42 ; $0AEBC4 |
   db $40, $40, $41, $40, $40, $40, $48, $C8 ; $0AEBCC |

@@ -1,8 +1,14 @@
 org $178000
 
-  dw $3000, $47FF, $01BF, $FFFF             ; $178000 |
-  dw $3800, $47FF, $0000, $7E82             ; $178008 |
-  dw $4277, $05FF, $FFFF                    ; $178010 |
+; tilemap init queue entries
+; island graphic tilemap init
+  dw $3000, $47FF, $01BF                    ; $178000 |
+  dw $FFFF                                  ; $178006 |
+; island cutscene tilemap init
+  dw $3800, $47FF, $0000                    ; $178008 |
+  dw $7E82, $4277, $05FF                    ; $17800E |
+  dw $FFFF                                  ; $178014 |
+
 
   db $43, $1B, $18, $5B, $7E                ; $178016 |
 
@@ -49,18 +55,23 @@ org $178000
   db $00, $F8, $0F, $80, $93, $5F, $DA, $58 ; $1780A3 |
   db $A1, $21, $C8, $BB, $20, $B9, $34, $40 ; $1780AB |
   db $B9, $D4, $70, $00, $4D, $00, $1C, $00 ; $1780B3 |
-  db $EF, $00, $9C, $00, $2A, $00, $02      ; $1780BB |
+  db $EF, $00, $9C, $00, $2A, $00           ; $1780BB |
 
-  dw $707C, $7C6A, $D270, $707C             ; $1780C2 |
+save_data_last_lvl_ptr:
+  dl $707C02, $707C6A, $707CD2              ; $1780C1 | "last level beaten" save data pointers file 1, 2, 3
 
-  dw $7C47, $7CAF, $7D17, $7C46             ; $1780CA |
-  dw $7CAE, $7D16                           ; $1780D2 |
+save_data_6_E_ptr:
+  dw $7C47, $7CAF, $7D17                    ; $1780CA | 6-E completed / score save data pointers file 1, 2, 3
 
+save_data_6_8_ptr:
+  dw $7C46, $7CAE, $7D16                    ; $1780D0 | 6-8 completed / score save data pointers file 1, 2, 3
+
+; title screen init
 gamemode_18:
   LDA #$12                                  ; $1780D6 |
   JSL $008279                               ; $1780D8 |
-  JSL $00831C                               ; $1780DC | init some ram
-  JSL $00BE26                               ; $1780E0 |
+  JSL clear_basic_states                    ; $1780DC | init some ram
+  JSL copy_division_lookup_to_sram          ; $1780E0 |
   REP #$20                                  ; $1780E4 |
   LDA #$0080                                ; $1780E6 |
   STA $020E                                 ; $1780E9 |
@@ -86,36 +97,36 @@ gamemode_18:
   SEP #$20                                  ; $17811F |
   LDA $011A                                 ; $178121 |
   BNE CODE_17815C                           ; $178124 |
-  LDA $707E7C                               ; $178126 |
-  ASL A                                     ; $17812A |
-  ADC $707E7C                               ; $17812B |
-  TAX                                       ; $17812F |
-  REP #$20                                  ; $178130 |
-  LDA $80C1,x                               ; $178132 |
-  STA $00                                   ; $178135 |
-  LDA $80C2,x                               ; $178137 |
-  STA $01                                   ; $17813A |
-  STZ $0216                                 ; $17813C |
+  LDA $707E7C                               ; $178126 |\
+  ASL A                                     ; $17812A | | save file slot * 3
+  ADC $707E7C                               ; $17812B | |
+  TAX                                       ; $17812F |/
+  REP #$20                                  ; $178130 |\
+  LDA save_data_last_lvl_ptr,x              ; $178132 | | store long save "last level beaten" file pointer
+  STA $00                                   ; $178135 | | -> $7E0000~$7E0002
+  LDA save_data_last_lvl_ptr+1,x            ; $178137 | |
+  STA $01                                   ; $17813A |/
+  STZ !r_last_world_unlocked                ; $17813C | clear "final world unlocked" flag
   SEP #$20                                  ; $17813F |
   LDX #$00                                  ; $178141 |
-  LDA [$00]                                 ; $178143 |
-  AND #$7F                                  ; $178145 |
-  BEQ CODE_178157                           ; $178147 |
+  LDA [$00]                                 ; $178143 |\  load last level beaten save data
+  AND #$7F                                  ; $178145 | | mask off the "completed" flag
+  BEQ .store_world                          ; $178147 |/  if this is 0, skip computing
 
-CODE_178149:
-  INX                                       ; $178149 |
-  SEC                                       ; $17814A |
-  SBC #$0C                                  ; $17814B |
-  BPL CODE_178149                           ; $17814D |
-  DEX                                       ; $17814F |
-  CPX #$05                                  ; $178150 |
-  BNE CODE_178157                           ; $178152 |
-  INC $0216                                 ; $178154 |
+.compute_world
+  INX                                       ; $178149 |\  loop
+  SEC                                       ; $17814A | | subtract $C (# of icons per world) until
+  SBC #$0C                                  ; $17814B | | negative, counting 1 in X each time
+  BPL .compute_world                        ; $17814D | |
+  DEX                                       ; $17814F |/  then -1 afterward
+  CPX #$05                                  ; $178150 |\
+  BNE .store_world                          ; $178152 | | are we final world value $05?
+  INC !r_last_world_unlocked                ; $178154 |/  if so, set "final world unlocked" flag
 
-CODE_178157:
-  TXA                                       ; $178157 |
-  ASL A                                     ; $178158 |
-  STA $0218                                 ; $178159 |
+.store_world
+  TXA                                       ; $178157 |\
+  ASL A                                     ; $178158 | | store world * 2 -> current world value
+  STA !r_cur_world                          ; $178159 |/
 
 CODE_17815C:
   LDX #$04                                  ; $17815C |
@@ -168,7 +179,7 @@ CODE_1781A4:
   STA $09A0                                 ; $1781DA |
   JSL $00B3CF                               ; $1781DD |
   LDX #$00                                  ; $1781E1 |
-  JSL $00BDA2                               ; $1781E3 |
+  JSL init_scene_regs                       ; $1781E3 |
   LDA #$3C                                  ; $1781E7 |
   STA !reg_bg4sc                            ; $1781E9 |
   STZ !reg_m7sel                            ; $1781EC |
@@ -218,7 +229,7 @@ CODE_1781A4:
   AND #$00FF                                ; $178265 |
   CMP #$0080                                ; $178268 |
   BEQ CODE_178275                           ; $17826B |
-  LDA $0216                                 ; $17826D |
+  LDA !r_last_world_unlocked                ; $17826D |
   BNE CODE_178275                           ; $178270 |
   DEY                                       ; $178272 |
   DEY                                       ; $178273 |
@@ -365,21 +376,21 @@ CODE_17838C:
   LDX #$7E                                  ; $178393 |
   STX $22                                   ; $178395 |
   LDA #$0400                                ; $178397 |
-  JSL $0082AB                               ; $17839A |
+  JSL dma_init_gen_purpose                  ; $17839A |
   LDA #$83BE                                ; $17839E |
   STA $20                                   ; $1783A1 |
   LDA #$0400                                ; $1783A3 |
-  JSL $0082AB                               ; $1783A6 |
+  JSL dma_init_gen_purpose                  ; $1783A6 |
   LDA #$0011                                ; $1783AA |
-  STA $0967                                 ; $1783AD |
+  STA !r_reg_tm_mirror                      ; $1783AD |
   SEP #$20                                  ; $1783B0 |
   LDA #$06                                  ; $1783B2 |
   STA $0127                                 ; $1783B4 |
-  JSL $00E37B                               ; $1783B7 |
+  JSL prepare_tilemap_dma_queue_l           ; $1783B7 |
   LDA #$CE                                  ; $1783BB |
 
 CODE_1783BD:
-  STA $094A                                 ; $1783BD |
+  STA !r_reg_hdmaen_mirror                  ; $1783BD |
   REP #$10                                  ; $1783C0 |
   LDX #$0044                                ; $1783C2 |
 
@@ -398,7 +409,7 @@ CODE_1783CE:
   LDA $011A                                 ; $1783D8 |
   CMP #$80                                  ; $1783DB |
   BEQ CODE_1783E6                           ; $1783DD |
-  LDA $0216                                 ; $1783DF |
+  LDA !r_last_world_unlocked                ; $1783DF |
   BNE CODE_1783E6                           ; $1783E2 |
   DEX                                       ; $1783E4 |
   DEX                                       ; $1783E5 |
@@ -416,7 +427,7 @@ CODE_1783E6:
   AND #$00FF                                ; $1783F9 |
   CMP #$0080                                ; $1783FC |
   BEQ CODE_178408                           ; $1783FF |
-  LDA $0216                                 ; $178401 |
+  LDA !r_last_world_unlocked                ; $178401 |
   BNE CODE_178408                           ; $178404 |
   STZ $04                                   ; $178406 |
 
@@ -463,7 +474,7 @@ CODE_17841B:
   AND #$00FF                                ; $178460 |
   CMP #$0080                                ; $178463 |
   BEQ CODE_17846F                           ; $178466 |
-  LDA $0216                                 ; $178468 |
+  LDA !r_last_world_unlocked                ; $178468 |
   BNE CODE_17846F                           ; $17846B |
   DEX                                       ; $17846D |
   DEX                                       ; $17846E |
@@ -541,7 +552,7 @@ CODE_1784D8:
 CODE_1784E3:
   PLB                                       ; $1784E3 |
   JSR CODE_178661                           ; $1784E4 |
-  LDX $0218                                 ; $1784E7 |
+  LDX !r_cur_world                          ; $1784E7 |
   BNE CODE_1784EF                           ; $1784EA |
   JMP CODE_1785A1                           ; $1784EC |
 
@@ -568,21 +579,21 @@ CODE_1784F8:
   LDA $011A                                 ; $178519 |
   AND #$7F                                  ; $17851C |
   BNE CODE_178568                           ; $17851E |
-  LDA $0218                                 ; $178520 |
-  CMP #$0A                                  ; $178523 |
-  BNE CODE_178568                           ; $178525 |
-  LDA $707E7C                               ; $178527 |
-  ASL A                                     ; $17852B |
-  TAY                                       ; $17852C |
-  LDA #$70                                  ; $17852D |
-  STA $02                                   ; $17852F |
-  REP #$20                                  ; $178531 |
-  LDA $80D0,y                               ; $178533 |
-  STA $00                                   ; $178536 |
-  SEP #$20                                  ; $178538 |
-  LDA [$00]                                 ; $17853A |
-  AND #$80                                  ; $17853C |
-  BEQ CODE_178566                           ; $17853E |
+  LDA !r_cur_world                          ; $178520 |\
+  CMP #$0A                                  ; $178523 | | if current world != world 6
+  BNE CODE_178568                           ; $178525 |/
+  LDA $707E7C                               ; $178527 |\
+  ASL A                                     ; $17852B | | load save file # * 2 (00, 02, 04)
+  TAY                                       ; $17852C |/
+  LDA #$70                                  ; $17852D |\ sram bank
+  STA $02                                   ; $17852F |/
+  REP #$20                                  ; $178531 |\
+  LDA save_data_6_8_ptr,y                   ; $178533 | | sram address for 6-8's score/completed
+  STA $00                                   ; $178536 |/  -> $7E0000~$7E0002
+  SEP #$20                                  ; $178538 |\
+  LDA [$00]                                 ; $17853A | | branch if not completed 6-8
+  AND #$80                                  ; $17853C | |
+  BEQ CODE_178566                           ; $17853E |/
   REP #$20                                  ; $178540 |
   LDA $13FD97,x                             ; $178542 |
   STA $021C                                 ; $178546 |
@@ -672,7 +683,7 @@ CODE_1785B8:
   LDA #$1000                                ; $1785E6 |
   JSL $00BEA6                               ; $1785E9 |
   SEP #$30                                  ; $1785ED |
-  JSL $00E3D7                               ; $1785EF |
+  JSL process_vram_dma_queue_l              ; $1785EF |
 
 CODE_1785F3:
   LDA $011A                                 ; $1785F3 |
@@ -685,7 +696,7 @@ CODE_1785FC:
   BPL CODE_17860F                           ; $1785FF |
   LDA #$01                                  ; $178601 |
   STA $012B                                 ; $178603 |
-  LDX $0216                                 ; $178606 |
+  LDX !r_last_world_unlocked                ; $178606 |
   BEQ CODE_17860D                           ; $178609 |
   INC A                                     ; $17860B |
   INC A                                     ; $17860C |
@@ -715,7 +726,7 @@ CODE_178630:
   EOR #$01                                  ; $178638 |
   STA $0984                                 ; $17863A |
   LDA #$0F                                  ; $17863D |
-  STA $0200                                 ; $17863F |
+  STA !r_reg_inidisp_mirror                 ; $17863F |
   JSR CODE_178649                           ; $178642 |
   JML $1083E2                               ; $178645 |
 
@@ -804,7 +815,7 @@ CODE_178673:
   PLB                                       ; $1787D4 |
 
 gamemode19:
-  JSL $00824B                               ; $1787D5 |
+  JSL init_oam                              ; $1787D5 |
   REP #$30                                  ; $1787D9 |
   LDX #$009E                                ; $1787DB |
 
@@ -837,7 +848,7 @@ CODE_178809:
   JSL r_gsu_init_1                          ; $178810 | GSU init
   SEP #$20                                  ; $178814 |
   JSR CODE_178919                           ; $178816 |
-  LDA $30                                   ; $178819 |
+  LDA !r_frame_counter_global_dp            ; $178819 |
   AND #$07                                  ; $17881B |
   ASL A                                     ; $17881D |
   TAX                                       ; $17881E |
@@ -907,7 +918,7 @@ CODE_17889D:
   BNE CODE_17889D                           ; $17889E |
   REP #$20                                  ; $1788A0 |
   LDA #$0E00                                ; $1788A2 |
-  JSL $008288                               ; $1788A5 |
+  JSL dma_wram_gen_purpose                  ; $1788A5 |
   DEX                                       ; $1788A9 |
   DEX                                       ; $1788AA |
   BPL CODE_17886B                           ; $1788AB |
@@ -951,13 +962,13 @@ CODE_1788CD:
   LDA $0201                                 ; $1788F1 |
   TAX                                       ; $1788F4 |
   LDA $890B,x                               ; $1788F5 |
-  STA $0200                                 ; $1788F8 |
+  STA !r_reg_inidisp_mirror                 ; $1788F8 |
   TXA                                       ; $1788FB |
   EOR #$01                                  ; $1788FC |
   STA $0201                                 ; $1788FE |
   BNE CODE_178909                           ; $178901 |
   LDA $099C                                 ; $178903 |
-  STA $0118                                 ; $178906 |
+  STA !r_game_mode                          ; $178906 |
 
 CODE_178909:
   PLB                                       ; $178909 |
@@ -1344,7 +1355,7 @@ CODE_178BED:
   JSR CODE_178F9C                           ; $178BF2 |
   INC $6CA2                                 ; $178BF5 |
   INC $6CA2                                 ; $178BF8 |
-  LDA $30                                   ; $178BFB |
+  LDA !r_frame_counter_global_dp            ; $178BFB |
   AND #$01                                  ; $178BFD |
   BNE CODE_178C3D                           ; $178BFF |
   REP #$10                                  ; $178C01 |
@@ -1384,7 +1395,7 @@ CODE_178C3D:
   INC $6CA2                                 ; $178C43 |
   INC $6CA2                                 ; $178C46 |
   REP #$30                                  ; $178C49 |
-  LDA $0218                                 ; $178C4B |
+  LDA !r_cur_world                          ; $178C4B |
   ASL A                                     ; $178C4E |
   TAX                                       ; $178C4F |
   SEP #$20                                  ; $178C50 |
@@ -1404,10 +1415,10 @@ CODE_178C3D:
 CODE_178C70:
   RTS                                       ; $178C70 |
 
-  REP #$30                                  ; $178C71 |
-  LDA $0218                                 ; $178C73 |
-  ASL A                                     ; $178C76 |
-  TAX                                       ; $178C77 |
+  REP #$30                                  ; $178C71 |\
+  LDA !r_cur_world                          ; $178C73 | | x = current world * 2
+  ASL A                                     ; $178C76 | | (since world is already * 2, now * 4)
+  TAX                                       ; $178C77 |/
   SEP #$20                                  ; $178C78 |
   LDA $0970                                 ; $178C7A |
   AND #$03                                  ; $178C7D |
@@ -1420,8 +1431,8 @@ CODE_178C70:
   CMP #$30                                  ; $178C8D |
   BCC CODE_178CCC                           ; $178C8F |
   STZ $0970                                 ; $178C91 |
-  CPX #$14                                  ; $178C94 |
-  BNE CODE_178CAE                           ; $178C96 |
+  CPX #$14                                  ; $178C94 |\ if world != world 6
+  BNE CODE_178CAE                           ; $178C96 |/
   INC $6CA2                                 ; $178C98 |
   INC $6CA2                                 ; $178C9B |
   LDA #$8B                                  ; $178C9E |
@@ -1481,7 +1492,7 @@ CODE_178CE8:
 
 CODE_178D0A:
   REP #$30                                  ; $178D0A |
-  LDA $0218                                 ; $178D0C |
+  LDA !r_cur_world                          ; $178D0C |
   ASL A                                     ; $178D0F |
   TAX                                       ; $178D10 |
   SEP #$20                                  ; $178D11 |
@@ -1600,7 +1611,7 @@ CODE_178DE2:
   LDA $0970                                 ; $178DEC |
   CMP #$30                                  ; $178DEF |
   BCC CODE_178DFD                           ; $178DF1 |
-  LDA $0118                                 ; $178DF3 |
+  LDA !r_game_mode                          ; $178DF3 |
   INC A                                     ; $178DF6 |
   STA $099C                                 ; $178DF7 |
   INC $098E                                 ; $178DFA |
@@ -1963,9 +1974,9 @@ CODE_17902F:
   CMP #$06                                  ; $17905B |
   BNE CODE_17906C                           ; $17905D |
   LDA #$CE                                  ; $17905F |
-  STA $094A                                 ; $179061 |
+  STA !r_reg_hdmaen_mirror                  ; $179061 |
   LDA #$11                                  ; $179064 |
-  STA $0967                                 ; $179066 |
+  STA !r_reg_tm_mirror                      ; $179066 |
 
 CODE_179069:
   INC $0988                                 ; $179069 |
@@ -2004,12 +2015,12 @@ CODE_17909A:
   JSR CODE_179466                           ; $1790AB |
   INC $0214                                 ; $1790AE |
   LDA #$41                                  ; $1790B1 |
-  STA $095E                                 ; $1790B3 |
+  STA !r_reg_bgmode_mirror                  ; $1790B3 |
   LDA #$17                                  ; $1790B6 |
-  STA $0967                                 ; $1790B8 |
+  STA !r_reg_tm_mirror                      ; $1790B8 |
   LDA #$30                                  ; $1790BB |
-  STA $095F                                 ; $1790BD |
-  STA $0960                                 ; $1790C0 |
+  STA !r_reg_bg1sc_mirror                   ; $1790BD |
+  STA !r_reg_bg2sc_mirror                   ; $1790C0 |
   LDA #$11                                  ; $1790C3 |
   STA $09A0                                 ; $1790C5 |
   REP #$20                                  ; $1790C8 |
@@ -2020,7 +2031,7 @@ CODE_17909A:
   STA $3F                                   ; $1790D3 |
   SEP #$20                                  ; $1790D5 |
   LDA #$FE                                  ; $1790D7 |
-  STA $094A                                 ; $1790D9 |
+  STA !r_reg_hdmaen_mirror                  ; $1790D9 |
   STZ $0988                                 ; $1790DC |
 
 CODE_1790DF:
@@ -2430,12 +2441,12 @@ CODE_179466:
   db $C6, $FF, $FF                          ; $1794DE |
 
 CODE_1794E1:
-  STZ $6C00                                 ; $1794E1 |
+  STZ !s_oam_hi_table_mirror                ; $1794E1 |
   STZ $6C01                                 ; $1794E4 |
   STZ $112C                                 ; $1794E7 |
   STZ $112D                                 ; $1794EA |
   LDA #$B5                                  ; $1794ED |
-  STA $096C                                 ; $1794EF |
+  STA !r_reg_cgadsub_mirror                 ; $1794EF |
   LDA $1117                                 ; $1794F2 |
   BEQ CODE_1794FE                           ; $1794F5 |
   ASL A                                     ; $1794F7 |
@@ -2921,13 +2932,13 @@ CODE_179844:
   LDA $111D                                 ; $179845 |
   STA $707E7C                               ; $179848 |
   ASL A                                     ; $17984C |
-  STA $030E                                 ; $17984D |
+  STA !r_cur_save_file                      ; $17984D |
   REP #$20                                  ; $179850 |
   LDX #$0A                                  ; $179852 |
   LDA #$0000                                ; $179854 |
 
 CODE_179857:
-  STA $030F,x                               ; $179857 |
+  STA !r_map_icon_gfx,x                     ; $179857 |
   STA $031B,x                               ; $17985A |
   STA $0327,x                               ; $17985D |
   STA $0333,x                               ; $179860 |
@@ -2945,28 +2956,33 @@ CODE_179857:
   STA $0353                                 ; $17987F |
   SEP #$20                                  ; $179882 |
   JSL $10810A                               ; $179884 |
-  STZ $0216                                 ; $179888 |
-  LDA $021A                                 ; $17988B |
-  BMI CODE_179897                           ; $17988E |
-  CMP #$3C                                  ; $179890 |
-  BCC CODE_179897                           ; $179892 |
-  INC $0216                                 ; $179894 |
+  STZ !r_last_world_unlocked                ; $179888 |
+  LDA !r_cur_stage                          ; $17988B |\ branch if level >= $80
+  BMI .debug_file_3                         ; $17988E |/ means selecting from title screen (??)
+  CMP #$3C                                  ; $179890 |\ branch if level < $3C
+  BCC .debug_file_3                         ; $179892 |/
+  INC !r_last_world_unlocked                ; $179894 | unlock final world flag
 
-CODE_179897:
-  JMP CODE_179932                           ; $179897 |
-  LDA $111D                                 ; $17989A |
-  CMP #$02                                  ; $17989D |
-  BEQ CODE_1798A4                           ; $17989F |
-  JMP CODE_179932                           ; $1798A1 |
+.debug_file_3
+  JMP CODE_179932                           ; $179897 | jump past debug code
+
+; debug code: on file 3 select,
+; grant 99 coins, unlock all stages
+; and grant all pause menu items
+; (maybe more)
+  LDA $111D                                 ; $17989A |\
+  CMP #$02                                  ; $17989D | | check if file 3
+  BEQ CODE_1798A4                           ; $17989F |/
+  JMP CODE_179932                           ; $1798A1 | jump past debug code if not
 
 CODE_1798A4:
-  LDA #$63                                  ; $1798A4 |
-  STA $037B                                 ; $1798A6 |
-  LDA $35                                   ; $1798A9 |
-  AND #$30                                  ; $1798AB |
-  BEQ CODE_1798B4                           ; $1798AD |
-  LDA #$63                                  ; $1798AF |
-  STA $0379                                 ; $1798B1 |
+  LDA #$63                                  ; $1798A4 |\ change coins to 99
+  STA !r_coins_collected                    ; $1798A6 |/
+  LDA $35                                   ; $1798A9 |\  L or R being held?
+  AND #$30                                  ; $1798AB | | branch if not
+  BEQ CODE_1798B4                           ; $1798AD |/
+  LDA #$63                                  ; $1798AF |\ if L or R are held,
+  STA !r_extra_lives                        ; $1798B1 |/ change lives to 99
 
 CODE_1798B4:
   LDX #$00                                  ; $1798B4 |
@@ -2974,7 +2990,7 @@ CODE_1798B4:
   INC A                                     ; $1798B7 |
 
 CODE_1798B8:
-  STA $0357,x                               ; $1798B8 |
+  STA !r_pause_items,x                      ; $1798B8 | fill items
   INC A                                     ; $1798BB |
   CMP #$0A                                  ; $1798BC |
   BCC CODE_1798C2                           ; $1798BE |
@@ -2990,7 +3006,7 @@ CODE_1798C2:
   INC A                                     ; $1798CB |
 
 CODE_1798CC:
-  STA $0222,y                               ; $1798CC |
+  STA !r_stages_unlocked,y                  ; $1798CC | mark all levels as beaten
   INY                                       ; $1798CF |
   CPY #$48                                  ; $1798D0 |
   BCC CODE_1798CC                           ; $1798D2 |
@@ -2998,7 +3014,7 @@ CODE_1798CC:
   TAX                                       ; $1798D6 |
 
 CODE_1798D7:
-  INC A                                     ; $1798D7 |
+  INC A                                     ; $1798D7 | set level tile graphic
   PHA                                       ; $1798D8 |
   REP #$20                                  ; $1798D9 |
   LDA $1081E9,x                             ; $1798DB |
@@ -3026,7 +3042,7 @@ CODE_1798D7:
   CPX #$18                                  ; $179910 |
   BCC CODE_1798D7                           ; $179912 |
   REP #$20                                  ; $179914 |
-  LDA #$0A09                                ; $179916 |
+  LDA #$0A09                                ; $179916 | Sets extra and bonus tile graphic again?
   STA $0317                                 ; $179919 |
   STA $0323                                 ; $17991C |
   STA $032F                                 ; $17991F |
@@ -3034,26 +3050,27 @@ CODE_1798D7:
   STA $0347                                 ; $179925 |
   STA $0353                                 ; $179928 |
   SEP #$20                                  ; $17992B |
-  LDA #$01                                  ; $17992D |
-  STA $1127                                 ; $17992F |
+  LDA #$01                                  ; $17992D |\
+  STA $1127                                 ; $17992F |/ Set starting world as 1
+; END DEBUG CODE
 
 CODE_179932:
-  LDA #$03                                  ; $179932 |
-  STA $0379                                 ; $179934 |
+  LDA #$03                                  ; $179932 |\ starting # of lives after file select
+  STA !r_extra_lives                        ; $179934 |/
   LDA #$1F                                  ; $179937 |
-  STA $0118                                 ; $179939 |
+  STA !r_game_mode                          ; $179939 |
   LDA #$F1                                  ; $17993C |
   STA $4D                                   ; $17993E |
   LDA #$01                                  ; $179940 |
   STA $0201                                 ; $179942 |
   STZ $1115                                 ; $179945 |
   STZ $1116                                 ; $179948 |
-  LDX $030E                                 ; $17994B |
+  LDX !r_cur_save_file                      ; $17994B |
   LDA $1123,x                               ; $17994E |
   BNE CODE_17995B                           ; $179951 |
   LDA #$37                                  ; $179953 |
-  STA $0118                                 ; $179955 |
-  STZ $0383                                 ; $179958 |
+  STA !r_game_mode                          ; $179955 |
+  STZ !r_yoshi_color                        ; $179958 |
 
 CODE_17995B:
   RTS                                       ; $17995B |
@@ -3409,9 +3426,9 @@ CODE_179CC3:
   PLB                                       ; $179CCA |
   SEP #$20                                  ; $179CCB |
   LDA #$13                                  ; $179CCD |
-  STA $0969                                 ; $179CCF |
+  STA !r_reg_tmw_mirror                     ; $179CCF |
   LDA #$02                                  ; $179CD2 |
-  STA $0966                                 ; $179CD4 |
+  STA !r_reg_wobjsel_mirror                 ; $179CD4 |
   STZ $1107                                 ; $179CD7 |
   INC $1130                                 ; $179CDA |
   RTS                                       ; $179CDD |
@@ -3446,8 +3463,8 @@ CODE_179CC3:
   LDA #$0300                                ; $179D1F |
   JSL $00BEA6                               ; $179D22 |
   SEP #$30                                  ; $179D26 |
-  STZ $0969                                 ; $179D28 |
-  STZ $0966                                 ; $179D2B |
+  STZ !r_reg_tmw_mirror                     ; $179D28 |
+  STZ !r_reg_wobjsel_mirror                 ; $179D2B |
   STZ $1130                                 ; $179D2E |
   STZ $112B                                 ; $179D31 |
   LDA $96F6                                 ; $179D34 |
@@ -4230,7 +4247,7 @@ CODE_17A30F:
 CODE_17A356:
   REP #$20                                  ; $17A356 |
   LDA $1109                                 ; $17A358 |
-  STA $6A00                                 ; $17A35B |
+  STA !s_oam_lo_table_mirror                ; $17A35B |
 
 CODE_17A35E:
   LDA #$39C0                                ; $17A35E |
@@ -4255,7 +4272,7 @@ CODE_17A378:
   ASL A                                     ; $17A380 |
   TAX                                       ; $17A381 |
   LDA $A374,x                               ; $17A382 |
-  STA $6A00                                 ; $17A385 |
+  STA !s_oam_lo_table_mirror                ; $17A385 |
   BRA CODE_17A35E                           ; $17A388 |
 
   dw $37C8, $37C8, $3DC8                    ; $17A38A |
@@ -4293,9 +4310,9 @@ CODE_17A390:
 
 CODE_17A3D1:
   SEP #$20                                  ; $17A3D1 |
-  LDA $6C00                                 ; $17A3D3 |
+  LDA !s_oam_hi_table_mirror                ; $17A3D3 |
   ORA #$20                                  ; $17A3D6 |
-  STA $6C00                                 ; $17A3D8 |
+  STA !s_oam_hi_table_mirror                ; $17A3D8 |
   RTS                                       ; $17A3DB |
 
   dw $2334, $235C, $2384                    ; $17A3DC |
@@ -4315,9 +4332,9 @@ CODE_17A3E2:
   ORA #$31CC                                ; $17A3F8 |
   STA $6A06                                 ; $17A3FB |
   SEP #$20                                  ; $17A3FE |
-  LDA $6C00                                 ; $17A400 |
+  LDA !s_oam_hi_table_mirror                ; $17A400 |
   ORA #$08                                  ; $17A403 |
-  STA $6C00                                 ; $17A405 |
+  STA !s_oam_hi_table_mirror                ; $17A405 |
   RTS                                       ; $17A408 |
 
 CODE_17A409:
@@ -4333,9 +4350,9 @@ CODE_17A409:
   ORA #$31C8                                ; $17A41D |
   STA $6A0A                                 ; $17A420 |
   SEP #$20                                  ; $17A423 |
-  LDA $6C00                                 ; $17A425 |
+  LDA !s_oam_hi_table_mirror                ; $17A425 |
   ORA #$20                                  ; $17A428 |
-  STA $6C00                                 ; $17A42A |
+  STA !s_oam_hi_table_mirror                ; $17A42A |
   RTS                                       ; $17A42D |
 
   dw $0709, $5B18, $6C7E, $1C1C             ; $17A42E |
@@ -4407,15 +4424,15 @@ CODE_17A409:
 
   LDA #$15                                  ; $17A596 |
   JSL $008279                               ; $17A598 |
-  JSL $00BE26                               ; $17A59C |
-  JSL $0394B8                               ; $17A5A0 |
+  JSL copy_division_lookup_to_sram          ; $17A59C |
+  JSL clear_all_sprites                     ; $17A5A0 |
   JSL $008259                               ; $17A5A4 |
   LDX #$28                                  ; $17A5A8 |\ play sound #$0028
-  JSL $00BDA2                               ; $17A5AA |/
+  JSL init_scene_regs                       ; $17A5AA |/
 
 gamemode20:
   LDA #$03                                  ; $17A5AE |
-  STA $094B                                 ; $17A5B0 |
+  STA !r_reg_obsel_mirror                   ; $17A5B0 |
   STA !reg_obsel                            ; $17A5B3 |
   STZ $0201                                 ; $17A5B6 |
   REP #$20                                  ; $17A5B9 |
@@ -4447,7 +4464,7 @@ gamemode20:
   SEP #$20                                  ; $17A602 |
   JSL $00B439                               ; $17A604 |
   REP #$30                                  ; $17A608 |
-  STZ $0383                                 ; $17A60A |
+  STZ !r_yoshi_color                        ; $17A60A |
   JSL $00BB47                               ; $17A60D |
   REP #$20                                  ; $17A611 |
   JSL $17CD0B                               ; $17A613 |
@@ -4498,22 +4515,22 @@ CODE_17A664:
   STA $1144                                 ; $17A685 |
   DEC A                                     ; $17A688 |
   STA $1145                                 ; $17A689 |
-  LDX $0218                                 ; $17A68C |
-  LDA $021A                                 ; $17A68F |
+  LDX !r_cur_world                          ; $17A68C |
+  LDA !r_cur_stage                          ; $17A68F |
   PHA                                       ; $17A692 |
   SEC                                       ; $17A693 |
   SBC $17E198,x                             ; $17A694 |
   CMP #$08                                  ; $17A698 |
   BCC CODE_17A6A6                           ; $17A69A |
   LDA $17E198,x                             ; $17A69C |
-  STA $021A                                 ; $17A6A0 |
+  STA !r_cur_stage                          ; $17A6A0 |
   LDA $0000                                 ; $17A6A3 |
 
 CODE_17A6A6:
   STA $112E                                 ; $17A6A6 |
   JSL $17C74B                               ; $17A6A9 |
   PLA                                       ; $17A6AD |
-  STA $021A                                 ; $17A6AE |
+  STA !r_cur_stage                          ; $17A6AE |
   JSR CODE_17A871                           ; $17A6B1 |
   LDA #$10                                  ; $17A6B4 |
   STA $02                                   ; $17A6B6 |
@@ -4528,7 +4545,7 @@ CODE_17A6A6:
   LDX $1123                                 ; $17A6CF |
   CPX #$09                                  ; $17A6D2 |
   BCC CODE_17A6F6                           ; $17A6D4 |
-  LDX $0218                                 ; $17A6D6 |
+  LDX !r_cur_world                          ; $17A6D6 |
   LDA $1081DD,x                             ; $17A6D9 |
   STA $00                                   ; $17A6DD |
   LDX #$00                                  ; $17A6DF |
@@ -4552,9 +4569,9 @@ CODE_17A6F6:
   TXA                                       ; $17A6F6 |
   AND #$00FF                                ; $17A6F7 |
   STA $1123                                 ; $17A6FA |
-  LDA $021A                                 ; $17A6FD |
+  LDA !r_cur_stage                          ; $17A6FD |
   STA $112B                                 ; $17A700 |
-  LDX $0218                                 ; $17A703 |
+  LDX !r_cur_world                          ; $17A703 |
   STZ $1148                                 ; $17A706 |
   LDA $17E198,x                             ; $17A709 |
   TAX                                       ; $17A70D |
@@ -4567,7 +4584,7 @@ CODE_17A6F6:
   STZ $00                                   ; $17A71E |
 
 CODE_17A720:
-  LDA $02B8,x                               ; $17A720 |
+  LDA !r_stage_scores,x                     ; $17A720 |
   AND #$00FF                                ; $17A723 |
   CLC                                       ; $17A726 |
   ADC $00                                   ; $17A727 |
@@ -4584,7 +4601,7 @@ CODE_17A739:
   SEP #$20                                  ; $17A739 |
   JSL $17C5FE                               ; $17A73B |
   REP #$20                                  ; $17A73F |
-  LDA $0218                                 ; $17A741 |
+  LDA !r_cur_world                          ; $17A741 |
   STA $1125                                 ; $17A744 |
   REP #$10                                  ; $17A747 |
   LDA #$0009                                ; $17A749 |
@@ -4609,7 +4626,7 @@ CODE_17A739:
   ASL A                                     ; $17A771 |
   STA $91                                   ; $17A772 |
   LDX #$0001                                ; $17A774 |
-  LDA $0118                                 ; $17A777 |
+  LDA !r_game_mode                          ; $17A777 |
   CMP #$0023                                ; $17A77A |
   BEQ CODE_17A780                           ; $17A77D |
   DEX                                       ; $17A77F |
@@ -4659,9 +4676,9 @@ CODE_17A780:
   STA $4305                                 ; $17A7E4 |
   STY !reg_mdmaen                           ; $17A7E7 |
   SEP #$30                                  ; $17A7EA |
-  JSL $00E3D7                               ; $17A7EC |
+  JSL process_vram_dma_queue_l              ; $17A7EC |
   LDX #$12                                  ; $17A7F0 |
-  JSL $008543                               ; $17A7F2 |
+  JSL set_level_music                       ; $17A7F2 |
   LDA $0205                                 ; $17A7F6 |
   BNE CODE_17A810                           ; $17A7F9 |
   LDA #$08                                  ; $17A7FB |
@@ -4676,7 +4693,7 @@ CODE_17A780:
   INC $4D                                   ; $17A80E |
 
 CODE_17A810:
-  LDA $0118                                 ; $17A810 |
+  LDA !r_game_mode                          ; $17A810 |
   CMP #$27                                  ; $17A813 |
   BCC CODE_17A819                           ; $17A815 |
   DEC $4D                                   ; $17A817 |
@@ -4684,7 +4701,7 @@ CODE_17A810:
 CODE_17A819:
   JSL $008245                               ; $17A819 |
   LDA #$FE                                  ; $17A81D |
-  STA $094A                                 ; $17A81F |
+  STA !r_reg_hdmaen_mirror                  ; $17A81F |
   JMP CODE_17B38A                           ; $17A822 |
 
 CODE_17A825:
@@ -4719,7 +4736,7 @@ CODE_17A825:
 CODE_17A85E:
   TXA                                       ; $17A85E |
   STA $69                                   ; $17A85F |
-  STA $6094                                 ; $17A861 |
+  STA !s_bg1_cam_x                          ; $17A861 |
   STA $6D                                   ; $17A864 |
   STA $79                                   ; $17A866 |
   STA $41                                   ; $17A868 |
@@ -4731,28 +4748,28 @@ CODE_17A871:
   STZ $1115                                 ; $17A871 |
   STZ $1135                                 ; $17A874 |
   LDA #$21                                  ; $17A877 |
-  STA $0118                                 ; $17A879 |
+  STA !r_game_mode                          ; $17A879 |
   STZ $1127                                 ; $17A87C |
   JSR CODE_17A908                           ; $17A87F |
   LDA $0220                                 ; $17A882 |
   BEQ CODE_17A8EF                           ; $17A885 |
-  LDX $021A                                 ; $17A887 |
+  LDX !r_cur_stage                          ; $17A887 |
   LDA #$01                                  ; $17A88A |
-  STA $0222,x                               ; $17A88C |
+  STA !r_stages_unlocked,x                  ; $17A88C |
   INC $1127                                 ; $17A88F |
   REP #$30                                  ; $17A892 |
   TXA                                       ; $17A894 |
   AND #$00FF                                ; $17A895 |
   ASL A                                     ; $17A898 |
   TAX                                       ; $17A899 |
-  LDA $17F3E7,x                             ; $17A89A |
+  LDA.l level_entrance_indexes,x            ; $17A89A |
   TAX                                       ; $17A89E |
-  LDA $17F474,x                             ; $17A89F |
+  LDA.l map_level_entrances+3,x             ; $17A89F |
   SEP #$30                                  ; $17A8A3 |
   TAY                                       ; $17A8A5 |
-  LDA $0222,y                               ; $17A8A6 |
+  LDA !r_stages_unlocked,y                  ; $17A8A6 |
   BNE CODE_17A8F1                           ; $17A8A9 |
-  STY $021A                                 ; $17A8AB |
+  STY !r_cur_stage                          ; $17A8AB |
   LDX #$FF                                  ; $17A8AE |
   TYA                                       ; $17A8B0 |
 
@@ -4765,23 +4782,23 @@ CODE_17A8B1:
   TXA                                       ; $17A8B9 |
   AND #$00FF                                ; $17A8BA |
   ASL A                                     ; $17A8BD |
-  STA $0218                                 ; $17A8BE |
+  STA !r_cur_world                          ; $17A8BE |
   SEP #$30                                  ; $17A8C1 |
   JSL $108279                               ; $17A8C3 |
   LDA #$23                                  ; $17A8C7 |
-  STA $0118                                 ; $17A8C9 |
-  LDA $0218                                 ; $17A8CC |
+  STA !r_game_mode                          ; $17A8C9 |
+  LDA !r_cur_world                          ; $17A8CC |
   LSR A                                     ; $17A8CF |
   TAX                                       ; $17A8D0 |
-  LDA $021A                                 ; $17A8D1 |
+  LDA !r_cur_stage                          ; $17A8D1 |
   CMP $E187,x                               ; $17A8D4 |
   BNE CODE_17A8F1                           ; $17A8D7 |
   STX $1115                                 ; $17A8D9 |
-  DEC $0218                                 ; $17A8DC |
-  DEC $0218                                 ; $17A8DF |
+  DEC !r_cur_world                          ; $17A8DC |
+  DEC !r_cur_world                          ; $17A8DF |
   JSR CODE_17A908                           ; $17A8E2 |
   LDA #$27                                  ; $17A8E5 |
-  STA $0118                                 ; $17A8E7 |
+  STA !r_game_mode                          ; $17A8E7 |
   LDA #$07                                  ; $17A8EA |
   STA $112E                                 ; $17A8EC |
 
@@ -4795,7 +4812,7 @@ CODE_17A8F1:
   STA $1135                                 ; $17A8F8 |
   JSL $108279                               ; $17A8FB |
   LDA #$25                                  ; $17A8FF |
-  STA $0118                                 ; $17A901 |
+  STA !r_game_mode                          ; $17A901 |
 
 CODE_17A904:
   STZ $0220                                 ; $17A904 |
@@ -4803,8 +4820,8 @@ CODE_17A904:
 
 CODE_17A908:
   REP #$20                                  ; $17A908 |
-  LDX $0218                                 ; $17A90A |
-  LDA $021A                                 ; $17A90D |
+  LDX !r_cur_world                          ; $17A90A |
+  LDA !r_cur_stage                          ; $17A90D |
   SEC                                       ; $17A910 |
   SBC $E198,x                               ; $17A911 |
   STA $1123                                 ; $17A914 |
@@ -4865,7 +4882,7 @@ CODE_17A943:
   STA $1133                                 ; $17A988 |
 
 CODE_17A98B:
-  LDX $0218                                 ; $17A98B |
+  LDX !r_cur_world                          ; $17A98B |
   LDA $E198,x                               ; $17A98E |
   TAX                                       ; $17A991 |
   LDY #$08                                  ; $17A992 |
@@ -4911,19 +4928,19 @@ CODE_17A9AE:
 CODE_17A9DD:
   RTS                                       ; $17A9DD |
 
-  INC $0218                                 ; $17A9DE |
-  INC $0218                                 ; $17A9E1 |
-  LDA $0218                                 ; $17A9E4 |
+  INC !r_cur_world                          ; $17A9DE |
+  INC !r_cur_world                          ; $17A9E1 |
+  LDA !r_cur_world                          ; $17A9E4 |
   LSR A                                     ; $17A9E7 |
   TAY                                       ; $17A9E8 |
   LDX $E187,y                               ; $17A9E9 |
   LDA #$80                                  ; $17A9EC |
-  STA $0222,x                               ; $17A9EE |
+  STA !r_stages_unlocked,x                  ; $17A9EE |
   LDA #$FF                                  ; $17A9F1 |
   STA $011A                                 ; $17A9F3 |
   LDA #$08                                  ; $17A9F6 |
-  STA $0118                                 ; $17A9F8 |
-  STZ $0216                                 ; $17A9FB |
+  STA !r_game_mode                          ; $17A9F8 |
+  STZ !r_last_world_unlocked                ; $17A9FB |
   STZ $0217                                 ; $17A9FE |
   RTS                                       ; $17AA01 |
 
@@ -4970,17 +4987,17 @@ CODE_17AA46:
   JSR CODE_17AA7A                           ; $17AA4B |
   LDA $1133                                 ; $17AA4E |
   BNE CODE_17AA79                           ; $17AA51 |
-  LDY $021A                                 ; $17AA53 |
-  LDA $02B8,y                               ; $17AA56 |
+  LDY !r_cur_stage                          ; $17AA53 |
+  LDA !r_stage_scores,y                     ; $17AA56 |
   PHA                                       ; $17AA59 |
   LDA $1135                                 ; $17AA5A |
-  STA $02B8,y                               ; $17AA5D |
+  STA !r_stage_scores,y                     ; $17AA5D |
   PLA                                       ; $17AA60 |
   STA $1135                                 ; $17AA61 |
-  LDA $0218                                 ; $17AA64 |
+  LDA !r_cur_world                          ; $17AA64 |
   LSR A                                     ; $17AA67 |
   TAY                                       ; $17AA68 |
-  LDA $021A                                 ; $17AA69 |
+  LDA !r_cur_stage                          ; $17AA69 |
   SEC                                       ; $17AA6C |
   SBC $E187,y                               ; $17AA6D |
   STA $111F                                 ; $17AA70 |
@@ -5029,9 +5046,9 @@ CODE_17AA9B:
   CMP #$20                                  ; $17AABF |
   BCS CODE_17AAD6                           ; $17AAC1 |
   INC $1127                                 ; $17AAC3 |
-  LDX $021A                                 ; $17AAC6 |
+  LDX !r_cur_stage                          ; $17AAC6 |
   LDA $1135                                 ; $17AAC9 |
-  STA $02B8,x                               ; $17AACC |
+  STA !r_stage_scores,x                     ; $17AACC |
   STZ $1135                                 ; $17AACF |
   LDA #$05                                  ; $17AAD2 |
   STA $53                                   ; $17AAD4 |
@@ -5063,10 +5080,10 @@ CODE_17AAF9:
 
   LDX #$00                                  ; $17AB03 |
   JSL $17D87D                               ; $17AB05 |
-  LDA $0218                                 ; $17AB09 |
+  LDA !r_cur_world                          ; $17AB09 |
   LSR A                                     ; $17AB0C |
   TAX                                       ; $17AB0D |
-  LDA $021A                                 ; $17AB0E |
+  LDA !r_cur_stage                          ; $17AB0E |
   SEC                                       ; $17AB11 |
   SBC $E187,x                               ; $17AB12 |
   STA $111F                                 ; $17AB15 |
@@ -5136,7 +5153,7 @@ CODE_17AB89:
   db $81, $22, $5D, $09                     ; $17AB8A |
 
 CODE_17AB8E:
-  LDA $30                                   ; $17AB8E |
+  LDA !r_frame_counter_global_dp            ; $17AB8E |
   AND #$04                                  ; $17AB90 |
   LSR A                                     ; $17AB92 |
   TAX                                       ; $17AB93 |
@@ -5431,7 +5448,7 @@ CODE_17ADEE:
 CODE_17AE1B:
   REP #$10                                  ; $17AE1B |
   LDX #$000C                                ; $17AE1D |
-  LDY $6092                                 ; $17AE20 |
+  LDY !s_oam_next_free_slot_ptr             ; $17AE20 |
 
 CODE_17AE23:
   LDA $1160,x                               ; $17AE23 |
@@ -5532,7 +5549,7 @@ CODE_17AEEB:
   JMP CODE_17AE23                           ; $17AEEF |
 
 CODE_17AEF2:
-  STY $6092                                 ; $17AEF2 |
+  STY !s_oam_next_free_slot_ptr             ; $17AEF2 |
   JSR CODE_17AFCC                           ; $17AEF5 |
   SEP #$10                                  ; $17AEF8 |
   RTS                                       ; $17AEFA |
@@ -5551,7 +5568,7 @@ CODE_17AEF2:
 CODE_17AF33:
   REP #$10                                  ; $17AF33 |
   LDX #$000C                                ; $17AF35 |
-  LDA $6092                                 ; $17AF38 |
+  LDA !s_oam_next_free_slot_ptr             ; $17AF38 |
   STA $00                                   ; $17AF3B |
 
 CODE_17AF3D:
@@ -5594,7 +5611,7 @@ CODE_17AF7F:
   DEX                                       ; $17AF80 |
   BPL CODE_17AF3D                           ; $17AF81 |
   LDA $00                                   ; $17AF83 |
-  STA $6092                                 ; $17AF85 |
+  STA !s_oam_next_free_slot_ptr             ; $17AF85 |
   SEP #$10                                  ; $17AF88 |
   RTS                                       ; $17AF8A |
 
@@ -5661,14 +5678,14 @@ CODE_17B012:
   RTS                                       ; $17B012 |
 
   INC $1148                                 ; $17B013 |
-  LDX $0218                                 ; $17B016 |
+  LDX !r_cur_world                          ; $17B016 |
   LDA $17E198,x                             ; $17B019 |
   CLC                                       ; $17B01D |
   ADC #$08                                  ; $17B01E |
   STA $114C                                 ; $17B020 |
   TAX                                       ; $17B023 |
   LDA #$01                                  ; $17B024 |
-  STA $0222,x                               ; $17B026 |
+  STA !r_stages_unlocked,x                  ; $17B026 |
   REP #$20                                  ; $17B029 |
   JSR CODE_17AE1B                           ; $17B02B |
   LDA #$0010                                ; $17B02E |
@@ -5711,7 +5728,7 @@ CODE_17B07D:
   LDX $114C                                 ; $17B080 |
   JSR CODE_17B623                           ; $17B083 |
   SEP #$20                                  ; $17B086 |
-  LDX $0218                                 ; $17B088 |
+  LDX !r_cur_world                          ; $17B088 |
   LDA $114C                                 ; $17B08B |
   SEC                                       ; $17B08E |
   SBC $17E198,x                             ; $17B08F |
@@ -5724,7 +5741,7 @@ CODE_17B07D:
   STA $1133                                 ; $17B09F |
   INC $1148                                 ; $17B0A2 |
   LDY #$10                                  ; $17B0A5 |
-  LDX $0218                                 ; $17B0A7 |
+  LDX !r_cur_world                          ; $17B0A7 |
   LDA $114C                                 ; $17B0AA |
   ASL A                                     ; $17B0AD |
   TAX                                       ; $17B0AE |
@@ -5740,7 +5757,7 @@ CODE_17B07D:
   LDA $114C                                 ; $17B0C9 |
   TAX                                       ; $17B0CC |
   LDA #$01                                  ; $17B0CD |
-  STA $0222,x                               ; $17B0CF |
+  STA !r_stages_unlocked,x                  ; $17B0CF |
   REP #$20                                  ; $17B0D2 |
   STZ $1130                                 ; $17B0D4 |
   LDA #$0010                                ; $17B0D7 |
@@ -5757,7 +5774,7 @@ CODE_17B07D:
   STA $1133                                 ; $17B0EF |
   INC $1148                                 ; $17B0F2 |
   LDY #$12                                  ; $17B0F5 |
-  LDX $0218                                 ; $17B0F7 |
+  LDX !r_cur_world                          ; $17B0F7 |
   LDA $114C                                 ; $17B0FA |
   ASL A                                     ; $17B0FD |
   TAX                                       ; $17B0FE |
@@ -5921,7 +5938,7 @@ CODE_17B20F:
 
 CODE_17B24C:
   LDX #$000C                                ; $17B24C |
-  LDY $6092                                 ; $17B24F |
+  LDY !s_oam_next_free_slot_ptr             ; $17B24F |
   STY $00                                   ; $17B252 |
 
 CODE_17B254:
@@ -6026,7 +6043,7 @@ CODE_17B319:
 
 CODE_17B320:
   LDA $00                                   ; $17B320 |
-  STA $6092                                 ; $17B322 |
+  STA !s_oam_next_free_slot_ptr             ; $17B322 |
   RTS                                       ; $17B325 |
 
   LDA #$08                                  ; $17B326 |
@@ -6039,7 +6056,7 @@ CODE_17B320:
   STZ $3D                                   ; $17B335 |
   LDA #$0080                                ; $17B337 |
   STA $3F                                   ; $17B33A |
-  LDX $0218                                 ; $17B33C |
+  LDX !r_cur_world                          ; $17B33C |
   LDA $17E198,x                             ; $17B33F |
   TAY                                       ; $17B343 |
   LDA #$0A09                                ; $17B344 |
@@ -6047,7 +6064,7 @@ CODE_17B320:
   SEP #$20                                  ; $17B34A |
   JSL $108279                               ; $17B34C |
   LDX #$22                                  ; $17B350 |
-  LDA $0118                                 ; $17B352 |
+  LDA !r_game_mode                          ; $17B352 |
   CMP #$28                                  ; $17B355 |
   BCC CODE_17B35F                           ; $17B357 |
   TAX                                       ; $17B359 |
@@ -6055,7 +6072,7 @@ CODE_17B320:
   STA $1127                                 ; $17B35C |
 
 CODE_17B35F:
-  STX $0118                                 ; $17B35F |
+  STX !r_game_mode                          ; $17B35F |
   RTS                                       ; $17B362 |
 
 gamemode24:
@@ -6086,7 +6103,7 @@ CODE_17B387:
 CODE_17B38A:
   REP #$20                                  ; $17B38A |
   LDA $6D                                   ; $17B38C |
-  STA $6094                                 ; $17B38E |
+  STA !s_bg1_cam_x                          ; $17B38E |
   LDX #$08                                  ; $17B391 |
   LDA #$B1EF                                ; $17B393 |
   JSL r_gsu_init_1                          ; $17B396 |
@@ -6125,35 +6142,38 @@ CODE_17B3AA:
   dw $C562                                  ; $17B3C9 |
   dw $C5C5                                  ; $17B3CB |
 
+; map screen
 gamemode22:
   JSL $008259                               ; $17B3CD |
   JSL $17C757                               ; $17B3D1 |
   JMP CODE_17B430                           ; $17B3D5 |
-  LDA $030E                                 ; $17B3D8 |
+
+; Various debug code for world map
+  LDA !r_cur_save_file                      ; $17B3D8 |
   CMP #$04                                  ; $17B3DB |
   BNE CODE_17B424                           ; $17B3DD |
-  LDA $0943                                 ; $17B3DF |
-  AND #$20                                  ; $17B3E2 |
-  BEQ CODE_17B3F8                           ; $17B3E4 |
+  LDA !r_joy2_hi_press                      ; $17B3DF |\
+  AND #$20                                  ; $17B3E2 | | If select button on controller 2
+  BEQ CODE_17B3F8                           ; $17B3E4 |/
   LDA #$FF                                  ; $17B3E6 |
   STA $011A                                 ; $17B3E8 |
-  INC $0218                                 ; $17B3EB |
-  INC $0218                                 ; $17B3EE |
+  INC !r_cur_world                          ; $17B3EB |
+  INC !r_cur_world                          ; $17B3EE |
   LDA #$08                                  ; $17B3F1 |
-  STA $0118                                 ; $17B3F3 |
+  STA !r_game_mode                          ; $17B3F3 |
   BRA CODE_17B430                           ; $17B3F6 |
 
 CODE_17B3F8:
-  LDA $0942                                 ; $17B3F8 |
-  CMP #$80                                  ; $17B3FB |
-  BNE CODE_17B424                           ; $17B3FD |
+  LDA !r_joy2_lo_press                      ; $17B3F8 |\
+  CMP #$80                                  ; $17B3FB | | If A button on controller 2
+  BNE CODE_17B424                           ; $17B3FD |/
   LDA #$1F                                  ; $17B3FF |
-  STA $0118                                 ; $17B401 |
+  STA !r_game_mode                          ; $17B401 |
   LDA #$E4                                  ; $17B404 |
   STA $0220                                 ; $17B406 |
   REP #$20                                  ; $17B409 |
   LDA #$6464                                ; $17B40B |
-  STA $02B8                                 ; $17B40E |
+  STA !r_stage_scores                       ; $17B40E |
   STA $02BA                                 ; $17B411 |
   STA $02BC                                 ; $17B414 |
   STA $02BE                                 ; $17B417 |
@@ -6163,11 +6183,12 @@ CODE_17B3F8:
   BRA CODE_17B430                           ; $17B422 |
 
 CODE_17B424:
-  LDA $0942                                 ; $17B424 |
-  AND #$30                                  ; $17B427 |
-  BEQ CODE_17B430                           ; $17B429 |
+  LDA !r_joy2_lo_press                      ; $17B424 |\
+  AND #$30                                  ; $17B427 | | If L/R buttons on controller 2
+  BEQ CODE_17B430                           ; $17B429 |/
   LDA #$16                                  ; $17B42B |
-  STA $0118                                 ; $17B42D |
+  STA !r_game_mode                          ; $17B42D |
+; END DEBUG CODE
 
 CODE_17B430:
   LDX #$00                                  ; $17B430 |
@@ -6201,48 +6222,49 @@ CODE_17B45F:
   JSR ($B3C5,x)                             ; $17B45F |
   LDA $098E                                 ; $17B462 |
   BEQ CODE_17B4BA                           ; $17B465 |
-  DEC $0200                                 ; $17B467 |
+  DEC !r_reg_inidisp_mirror                 ; $17B467 |
   BNE CODE_17B4BA                           ; $17B46A |
   LDA $0201                                 ; $17B46C |
   EOR #$01                                  ; $17B46F |
   STA $0201                                 ; $17B471 |
-  STZ $0200                                 ; $17B474 |
-  STZ $096B                                 ; $17B477 |
+  STZ !r_reg_inidisp_mirror                 ; $17B474 |
+  STZ !r_reg_cgwsel_mirror                  ; $17B477 |
   LDA #$58                                  ; $17B47A |
   STA $0392                                 ; $17B47C |
-  STZ $03B8                                 ; $17B47F |
+  STZ !r_flowers_amount                     ; $17B47F |
   STZ $03B9                                 ; $17B482 |
   REP #$20                                  ; $17B485 |
-  LDA $021A                                 ; $17B487 |
+  LDA !r_cur_stage                          ; $17B487 |
   CMP $112B                                 ; $17B48A |
   BEQ CODE_17B495                           ; $17B48D |
-  STZ $037D                                 ; $17B48F |
-  STZ $037F                                 ; $17B492 |
+  STZ !r_death_count                        ; $17B48F |
+  STZ !r_1ups_collected                     ; $17B492 |
 
 CODE_17B495:
   SEP #$20                                  ; $17B495 |
   TAY                                       ; $17B497 |
-  LDA $02B8,y                               ; $17B498 |
+  LDA !r_stage_scores,y                     ; $17B498 |
   STA $0381                                 ; $17B49B |
-  LDY #$0C                                  ; $17B49E |
-  STY $0118                                 ; $17B4A0 |
-  LDA $0218                                 ; $17B4A3 |
-  LSR A                                     ; $17B4A6 |
-  TAX                                       ; $17B4A7 |
-  LDA $021A                                 ; $17B4A8 |
-  CMP $B4BD,x                               ; $17B4AB |
-  BNE CODE_17B4BA                           ; $17B4AE |
-  LDA #$2A                                  ; $17B4B0 |
-  STA $0118                                 ; $17B4B2 |
-  TXA                                       ; $17B4B5 |
-  ASL A                                     ; $17B4B6 |
-  STA $0212                                 ; $17B4B7 |
+  LDY #$0C                                  ; $17B49E |\ level init gamemode
+  STY !r_game_mode                          ; $17B4A0 |/ cause we have selected an icon
+  LDA !r_cur_world                          ; $17B4A3 |\
+  LSR A                                     ; $17B4A6 | | x = current world / 2 (so, regular world 0-5)
+  TAX                                       ; $17B4A7 |/
+  LDA !r_cur_stage                          ; $17B4A8 |\  if level icon loaded
+  CMP map_bonus_icons,x                     ; $17B4AB | | doesn't match a bonus icon
+  BNE CODE_17B4BA                           ; $17B4AE |/
+  LDA #$2A                                  ; $17B4B0 |\ if we are bonus,
+  STA !r_game_mode                          ; $17B4B2 |/ change gamemode to bonus init
+  TXA                                       ; $17B4B5 |\
+  ASL A                                     ; $17B4B6 | | and load bonus game ID from world value
+  STA !r_bonus_game_type                    ; $17B4B7 |/
 
 CODE_17B4BA:
   JMP CODE_17B38A                           ; $17B4BA |
 
-  db $09, $15, $21, $2D, $39, $45, $51, $5D ; $17B4BD |
-  db $69                                    ; $17B4C5 |
+map_bonus_icons:
+  db $09, $15, $21, $2D, $39                ; $17B4BD | 9 worlds planned???? dang
+  db $45, $51, $5D, $69                     ; $17B4C2 |
 
   dw $B509                                  ; $17B4C6 |
   dw $B519                                  ; $17B4C8 |
@@ -6374,18 +6396,18 @@ CODE_17B5B6:
   JSR CODE_17B620                           ; $17B5C1 |
   SEP #$20                                  ; $17B5C4 |
   JSR CODE_17B645                           ; $17B5C6 |
-  LDA $0218                                 ; $17B5C9 |
+  LDA !r_cur_world                          ; $17B5C9 |
   LSR A                                     ; $17B5CC |
   TAX                                       ; $17B5CD |
-  LDY $021A                                 ; $17B5CE |
+  LDY !r_cur_stage                          ; $17B5CE |
   LDA #$80                                  ; $17B5D1 |
-  STA $0222,y                               ; $17B5D3 |
+  STA !r_stages_unlocked,y                  ; $17B5D3 |
   PHY                                       ; $17B5D6 |
   TYA                                       ; $17B5D7 |
   INC A                                     ; $17B5D8 |
   SEC                                       ; $17B5D9 |
   SBC $E187,x                               ; $17B5DA |
-  STA $030F,y                               ; $17B5DD |
+  STA !r_map_icon_gfx,y                     ; $17B5DD |
   PLA                                       ; $17B5E0 |
   SEC                                       ; $17B5E1 |
   SBC $E187,x                               ; $17B5E2 |
@@ -6418,7 +6440,7 @@ CODE_17B5B6:
   RTS                                       ; $17B61F |
 
 CODE_17B620:
-  LDX $021A                                 ; $17B620 |
+  LDX !r_cur_stage                          ; $17B620 |
 
 CODE_17B623:
   LDA $17DBAF,x                             ; $17B623 |
@@ -6436,11 +6458,11 @@ CODE_17B623:
 
 CODE_17B645:
   REP #$20                                  ; $17B645 |
-  LDA $021A                                 ; $17B647 |
+  LDA !r_cur_stage                          ; $17B647 |
   ASL A                                     ; $17B64A |
   TAX                                       ; $17B64B |
-  LDY $0218                                 ; $17B64C |
-  LDA $021A                                 ; $17B64F |
+  LDY !r_cur_world                          ; $17B64C |
+  LDA !r_cur_stage                          ; $17B64F |
   SEC                                       ; $17B652 |
   SBC $E198,y                               ; $17B653 |
   STA $10                                   ; $17B656 |
@@ -6471,10 +6493,10 @@ CODE_17B66E:
   RTS                                       ; $17B686 |
 
 CODE_17B687:
-  LDA $0218                                 ; $17B687 |
+  LDA !r_cur_world                          ; $17B687 |
   LSR A                                     ; $17B68A |
   TAY                                       ; $17B68B |
-  LDA $021A                                 ; $17B68C |
+  LDA !r_cur_stage                          ; $17B68C |
   SEC                                       ; $17B68F |
   SBC $E187,y                               ; $17B690 |
 
@@ -6488,12 +6510,12 @@ CODE_17B693:
   STA $02                                   ; $17B69F |
   STZ $03                                   ; $17B6A1 |
   REP #$30                                  ; $17B6A3 |
-  LDX $0218                                 ; $17B6A5 |
+  LDX !r_cur_world                          ; $17B6A5 |
   LDA $17E198,x                             ; $17B6A8 |
   CLC                                       ; $17B6AC |
   ADC #$0008                                ; $17B6AD |
   STA $10                                   ; $17B6B0 |
-  LDX $6092                                 ; $17B6B2 |
+  LDX !s_oam_next_free_slot_ptr             ; $17B6B2 |
   LDA $00                                   ; $17B6B5 |
   SEC                                       ; $17B6B7 |
   SBC #$0010                                ; $17B6B8 |
@@ -6515,8 +6537,8 @@ CODE_17B693:
   LDA $1121                                 ; $17B6E1 |
   BEQ CODE_17B706                           ; $17B6E4 |
   STZ $00                                   ; $17B6E6 |
-  LDY $021A                                 ; $17B6E8 |
-  LDA $02B8,y                               ; $17B6EB |
+  LDY !r_cur_stage                          ; $17B6E8 |
+  LDA !r_stage_scores,y                     ; $17B6EB |
   AND #$00FF                                ; $17B6EE |
   CMP #$001E                                ; $17B6F1 |
   BCS CODE_17B702                           ; $17B6F4 |
@@ -6536,7 +6558,7 @@ CODE_17B702:
 CODE_17B706:
   LDA $1148                                 ; $17B706 |
   BEQ CODE_17B71D                           ; $17B709 |
-  LDY $0218                                 ; $17B70B |
+  LDY !r_cur_world                          ; $17B70B |
   LDA $114C                                 ; $17B70E |
   ASL A                                     ; $17B711 |
   TAY                                       ; $17B712 |
@@ -6571,7 +6593,7 @@ CODE_17B720:
   TXA                                       ; $17B748 |
   CLC                                       ; $17B749 |
   ADC #$0020                                ; $17B74A |
-  STA $6092                                 ; $17B74D |
+  STA !s_oam_next_free_slot_ptr             ; $17B74D |
   SEP #$30                                  ; $17B750 |
   RTS                                       ; $17B752 |
 
@@ -6592,7 +6614,7 @@ CODE_17B753:
 
 CODE_17B76F:
   LDA #$22                                  ; $17B76F |
-  STA $0118                                 ; $17B771 |
+  STA !r_game_mode                          ; $17B771 |
   STZ $1131                                 ; $17B774 |
   LDA #$32                                  ; $17B777 |
   STA $7E5C19                               ; $17B779 |
@@ -6793,10 +6815,10 @@ CODE_17BC08:
 
 CODE_17BC51:
   CLC                                       ; $17BC51 |
-  ADC $0075                                 ; $17BC52 |
+  ADC !r_cam_moving_dir_y                   ; $17BC52 |
   STA $00                                   ; $17BC55 |
   TXA                                       ; $17BC57 |
-  ADC $0077                                 ; $17BC58 |
+  ADC !r_new_column_flag                    ; $17BC58 |
   STA $02                                   ; $17BC5B |
   LDX #$0000                                ; $17BC5D |
   LDA !gsu_r2                               ; $17BC60 |
@@ -6808,7 +6830,7 @@ CODE_17BC66:
   ADC $0071                                 ; $17BC67 |
   STA $04                                   ; $17BC6A |
   TXA                                       ; $17BC6C |
-  ADC $0073                                 ; $17BC6D |
+  ADC !r_cam_moving_dir_x                   ; $17BC6D |
   STA $06                                   ; $17BC70 |
   LDX #$0000                                ; $17BC72 |
   LDA $01                                   ; $17BC75 |
@@ -6829,9 +6851,9 @@ CODE_17BC66:
 
 CODE_17BC95:
   LDA $00                                   ; $17BC95 |
-  STA $0075                                 ; $17BC97 |
+  STA !r_cam_moving_dir_y                   ; $17BC97 |
   LDA $02                                   ; $17BC9A |
-  STA $0077                                 ; $17BC9C |
+  STA !r_new_column_flag                    ; $17BC9C |
   LDA $05                                   ; $17BC9F |
   SEC                                       ; $17BCA1 |
   SBC $B901,y                               ; $17BCA2 |
@@ -6852,7 +6874,7 @@ CODE_17BCBF:
   LDA $04                                   ; $17BCBF |
   STA $0071                                 ; $17BCC1 |
   LDA $06                                   ; $17BCC4 |
-  STA $0073                                 ; $17BCC6 |
+  STA !r_cam_moving_dir_x                   ; $17BCC6 |
   CPX #$0002                                ; $17BCC9 |
   BNE CODE_17BCEF                           ; $17BCCC |
   INY                                       ; $17BCCE |
@@ -7016,6 +7038,7 @@ CODE_17BDAD:
   dw $3D60, $3F66, $3960, $3F60             ; $17BEE2 |
   dw $3966, $3D66, $3B66, $3D60             ; $17BEEA |
 
+; inactive yoshi animation indices
   dw $0000, $0004, $0002, $0004             ; $17BEF2 |
 
   dw $390F, $391F, $392F, $393F             ; $17BEFA |
@@ -7101,7 +7124,7 @@ CODE_17BF7C:
   STA $81                                   ; $17BFA2 |
 
 CODE_17BFA4:
-  LDX $6092                                 ; $17BFA4 |
+  LDX !s_oam_next_free_slot_ptr             ; $17BFA4 |
   LDA $76                                   ; $17BFA7 |
   SEC                                       ; $17BFA9 |
   SBC $6D                                   ; $17BFAA |
@@ -7161,7 +7184,7 @@ CODE_17BFA4:
   STA $600E,x                               ; $17C026 |
   STA $6016,x                               ; $17C029 |
   STA $6026,x                               ; $17C02C |
-  LDA $30                                   ; $17C02F |
+  LDA !r_frame_counter_global_dp            ; $17C02F |
   AND #$0018                                ; $17C031 |
   LSR A                                     ; $17C034 |
   LSR A                                     ; $17C035 |
@@ -7222,7 +7245,7 @@ CODE_17C05C:
   STA $600C,x                               ; $17C09C |
   LDA #$3B6E                                ; $17C09F |
   STA $6014,x                               ; $17C0A2 |
-  LDA $0218                                 ; $17C0A5 |
+  LDA !r_cur_world                          ; $17C0A5 |
   CMP #$000A                                ; $17C0A8 |
   BNE CODE_17C0B2                           ; $17C0AB |
   LDA $BEE2,y                               ; $17C0AD |
@@ -7258,7 +7281,7 @@ CODE_17C0CF:
   JMP CODE_17C052                           ; $17C0DE |
 
 CODE_17C0E1:
-  STX $6092                                 ; $17C0E1 |
+  STX !s_oam_next_free_slot_ptr             ; $17C0E1 |
   SEP #$30                                  ; $17C0E4 |
   RTS                                       ; $17C0E6 |
 
@@ -7272,7 +7295,7 @@ CODE_17C0E1:
   STA $81                                   ; $17C0F6 |
 
 CODE_17C0F8:
-  LDX $6092                                 ; $17C0F8 |
+  LDX !s_oam_next_free_slot_ptr             ; $17C0F8 |
   LDA $76                                   ; $17C0FB |
   SEC                                       ; $17C0FD |
   SBC $6D                                   ; $17C0FE |
@@ -7334,7 +7357,7 @@ CODE_17C0F8:
   TAX                                       ; $17C182 |
 
 CODE_17C183:
-  LDA $30                                   ; $17C183 |
+  LDA !r_frame_counter_global_dp            ; $17C183 |
   AND #$0018                                ; $17C185 |
   LSR A                                     ; $17C188 |
   LSR A                                     ; $17C189 |
@@ -7464,7 +7487,7 @@ CODE_17C26D:
 
   dw $0004, $0008                           ; $17C278 |
 
-  LDX $6092                                 ; $17C27C |
+  LDX !s_oam_next_free_slot_ptr             ; $17C27C |
   LDA $9B                                   ; $17C27F |
   ASL A                                     ; $17C281 |
   TAY                                       ; $17C282 |
@@ -7547,7 +7570,7 @@ CODE_17C26D:
 
   dw $0000, $0008                           ; $17C335 |
 
-  LDX $6092                                 ; $17C339 |
+  LDX !s_oam_next_free_slot_ptr             ; $17C339 |
   LDA $AB                                   ; $17C33C |
   SEC                                       ; $17C33E |
   SBC $6D                                   ; $17C33F |
@@ -7627,7 +7650,7 @@ CODE_17C35B:
   TAX                                       ; $17C3E7 |
   JMP CODE_17C183                           ; $17C3E8 |
 
-  LDX $6092                                 ; $17C3EB |
+  LDX !s_oam_next_free_slot_ptr             ; $17C3EB |
   LDA $76                                   ; $17C3EE |
   SEC                                       ; $17C3F0 |
   SBC $6D                                   ; $17C3F1 |
@@ -7696,7 +7719,7 @@ CODE_17C35B:
   STA $81                                   ; $17C484 |
 
 CODE_17C486:
-  LDX $6092                                 ; $17C486 |
+  LDX !s_oam_next_free_slot_ptr             ; $17C486 |
   LDA $76                                   ; $17C489 |
   SEC                                       ; $17C48B |
   SBC $6D                                   ; $17C48C |
@@ -7824,7 +7847,7 @@ CODE_17C58F:
   STA $41                                   ; $17C595 |
 
 CODE_17C597:
-  LDX $6092                                 ; $17C597 |
+  LDX !s_oam_next_free_slot_ptr             ; $17C597 |
   LDA #$00E8                                ; $17C59A |
   CPY #$0002                                ; $17C59D |
   BEQ CODE_17C5A5                           ; $17C5A0 |
@@ -7841,7 +7864,7 @@ CODE_17C5A5:
   TXA                                       ; $17C5BA |
   CLC                                       ; $17C5BB |
   ADC #$0008                                ; $17C5BC |
-  STA $6092                                 ; $17C5BF |
+  STA !s_oam_next_free_slot_ptr             ; $17C5BF |
   JMP CODE_17BF7C                           ; $17C5C2 |
   REP #$30                                  ; $17C5C5 |
   LDA #$0000                                ; $17C5C7 |
@@ -7887,10 +7910,10 @@ CODE_17C5FB:
   STZ $110C                                 ; $17C603 |
   SEP #$20                                  ; $17C606 |
   JSR CODE_17C8B3                           ; $17C608 |
-  LDA $0218                                 ; $17C60B |
+  LDA !r_cur_world                          ; $17C60B |
   LSR A                                     ; $17C60E |
   TAX                                       ; $17C60F |
-  LDA $021A                                 ; $17C610 |
+  LDA !r_cur_stage                          ; $17C610 |
   SEC                                       ; $17C613 |
   SBC $E187,x                               ; $17C614 |
   INC A                                     ; $17C617 |
@@ -7963,23 +7986,24 @@ CODE_17C677:
   db $00, $00, $00, $00, $02, $05, $00, $04 ; $17C6CC |
   db $01, $03, $06, $02                     ; $17C6D4 |
 
-  dw $DF88                                  ; $17C6D8 |
-  dw $DF8E                                  ; $17C6DA |
-  dw $DF94                                  ; $17C6DC |
-  dw $DF9A                                  ; $17C6DE |
-  dw $DFA0                                  ; $17C6E0 |
-  dw $DFA6                                  ; $17C6E2 |
-  dw $DFAC                                  ; $17C6E4 |
-  dw $DFB2                                  ; $17C6E6 |
-  dw $DFB8                                  ; $17C6E8 |
-  dw $DFBE                                  ; $17C6EA |
+map_active_yoshi_color_ptr:
+  dw $DF88                                  ; $17C6D8 | light blue
+  dw $DF8E                                  ; $17C6DA | purple
+  dw $DF94                                  ; $17C6DC | green
+  dw $DF9A                                  ; $17C6DE | brown
+  dw $DFA0                                  ; $17C6E0 | yellow
+  dw $DFA6                                  ; $17C6E2 | red
+  dw $DFAC                                  ; $17C6E4 | pink
+  dw $DFB2                                  ; $17C6E6 | dark blue
+  dw $DFB8                                  ; $17C6E8 | 9th and 10th Yoshi colors
+  dw $DFBE                                  ; $17C6EA | unused (bright magenta)
 
 CODE_17C6EC:
   LDA #$5F                                  ; $17C6EC |
   STA $02                                   ; $17C6EE |
   STA $05                                   ; $17C6F0 |
   REP #$30                                  ; $17C6F2 |
-  LDX $021A                                 ; $17C6F4 |
+  LDX !r_cur_stage                          ; $17C6F4 |
 
 CODE_17C6F7:
   LDA $C694,x                               ; $17C6F7 |
@@ -7998,9 +8022,9 @@ CODE_17C6F7:
 
 CODE_17C714:
   TXY                                       ; $17C714 |
-  LDA [$00],y                               ; $17C715 |
+  LDA [$00],y                               ; $17C715 | set active yoshi palette
   STA $70219A,x                             ; $17C717 |
-  LDA [$03],y                               ; $17C71B |
+  LDA [$03],y                               ; $17C71B | set "next yoshi" palette
   STA $7021BA,x                             ; $17C71D |
   INX                                       ; $17C721 |
   INX                                       ; $17C722 |
@@ -8017,7 +8041,7 @@ CODE_17C714:
   LDA $112E                                 ; $17C734 |
   AND #$00FF                                ; $17C737 |
   STA $00                                   ; $17C73A |
-  LDX $0218                                 ; $17C73C |
+  LDX !r_cur_world                          ; $17C73C |
   LDA $E198,x                               ; $17C73F |
   CLC                                       ; $17C742 |
   ADC $00                                   ; $17C743 |
@@ -8038,7 +8062,7 @@ CODE_17C714:
 
   STZ $1122                                 ; $17C757 |
   LDA #$B7                                  ; $17C75A |
-  STA $096C                                 ; $17C75C |
+  STA !r_reg_cgadsub_mirror                 ; $17C75C |
   LDA $114E                                 ; $17C75F |
   BEQ CODE_17C76C                           ; $17C762 |
   ASL A                                     ; $17C764 |
@@ -8249,7 +8273,7 @@ CODE_17C8C3:
 
 CODE_17C8D6:
   LDY $06                                   ; $17C8D6 |
-  LDA $0222,y                               ; $17C8D8 |
+  LDA !r_stages_unlocked,y                  ; $17C8D8 |
   BEQ CODE_17C91F                           ; $17C8DB |
   AND #$80                                  ; $17C8DD |
   ORA $02                                   ; $17C8DF |
@@ -8316,7 +8340,7 @@ CODE_17C91F:
 
 CODE_17C946:
   REP #$30                                  ; $17C946 |
-  LDX $0218                                 ; $17C948 |
+  LDX !r_cur_world                          ; $17C948 |
   LDA $C9EA,x                               ; $17C94B |
   STA $0E                                   ; $17C94E |
   STZ $08                                   ; $17C950 |
@@ -8424,7 +8448,7 @@ CODE_17CA11:
   TAX                                       ; $17CA1B |
   LDA $CB01,x                               ; $17CA1C |
   STA $00                                   ; $17CA1F |
-  LDY $6092                                 ; $17CA21 |
+  LDY !s_oam_next_free_slot_ptr             ; $17CA21 |
   LDA $1109                                 ; $17CA24 |
   AND #$00FF                                ; $17CA27 |
   STA $02                                   ; $17CA2A |
@@ -8518,7 +8542,7 @@ CODE_17CA11:
   TYA                                       ; $17CAEB |
   CLC                                       ; $17CAEC |
   ADC #$0030                                ; $17CAED |
-  STA $6092                                 ; $17CAF0 |
+  STA !s_oam_next_free_slot_ptr             ; $17CAF0 |
   SEP #$30                                  ; $17CAF3 |
 
 CODE_17CAF5:
@@ -8687,7 +8711,7 @@ CODE_17CCBA:
   STZ $1107                                 ; $17CCE3 |
   SEP #$20                                  ; $17CCE6 |
   LDA #$01                                  ; $17CCE8 |
-  STA $0969                                 ; $17CCEA |
+  STA !r_reg_tmw_mirror                     ; $17CCEA |
   INC $1118                                 ; $17CCED |
   RTS                                       ; $17CCF0 |
 
@@ -8764,8 +8788,8 @@ CODE_17CD63:
   JSR CODE_17CCF5                           ; $17CD65 |
   SEP #$20                                  ; $17CD68 |
   LDA #$17                                  ; $17CD6A |
-  STA $0969                                 ; $17CD6C |
-  STZ $096B                                 ; $17CD6F |
+  STA !r_reg_tmw_mirror                     ; $17CD6C |
+  STZ !r_reg_cgwsel_mirror                  ; $17CD6F |
   INC $1118                                 ; $17CD72 |
   RTS                                       ; $17CD75 |
 
@@ -8778,14 +8802,14 @@ CODE_17CD63:
   BCC CODE_17CD96                           ; $17CD87 |
   INC $1118                                 ; $17CD89 |
   REP #$20                                  ; $17CD8C |
-  LDA $0218                                 ; $17CD8E |
+  LDA !r_cur_world                          ; $17CD8E |
   STA $1125                                 ; $17CD91 |
   SEP #$20                                  ; $17CD94 |
 
 CODE_17CD96:
   RTS                                       ; $17CD96 |
 
-  JSL $0394B8                               ; $17CD97 |
+  JSL clear_all_sprites                     ; $17CD97 |
   JSL $008259                               ; $17CD9B |
   REP #$30                                  ; $17CD9F |
   STZ $112E                                 ; $17CDA1 |
@@ -8811,7 +8835,7 @@ CODE_17CD96:
 CODE_17CDCF:
   STA $0E                                   ; $17CDCF |
   STX $00                                   ; $17CDD1 |
-  LDA $0218                                 ; $17CDD3 |
+  LDA !r_cur_world                          ; $17CDD3 |
   CLC                                       ; $17CDD6 |
   ADC $00                                   ; $17CDD7 |
   TAX                                       ; $17CDD9 |
@@ -8901,7 +8925,7 @@ CODE_17CE11:
 CODE_17CE9F:
   STX $0E                                   ; $17CE9F |
   STY $00                                   ; $17CEA1 |
-  LDA $0218                                 ; $17CEA3 |
+  LDA !r_cur_world                          ; $17CEA3 |
   ASL A                                     ; $17CEA6 |
   ASL A                                     ; $17CEA7 |
   ADC $00                                   ; $17CEA8 |
@@ -8949,8 +8973,8 @@ CODE_17CEC1:
   STZ $1142                                 ; $17CF09 |
   STZ $1118                                 ; $17CF0C |
   LDA #$10                                  ; $17CF0F |
-  STA $096B                                 ; $17CF11 |
-  STZ $0969                                 ; $17CF14 |
+  STA !r_reg_cgwsel_mirror                  ; $17CF11 |
+  STZ !r_reg_tmw_mirror                     ; $17CF14 |
 
 CODE_17CF17:
   RTS                                       ; $17CF17 |
@@ -9078,7 +9102,7 @@ CODE_17CFDA:
 
 CODE_17D005:
   REP #$30                                  ; $17D005 |
-  LDY $6092                                 ; $17D007 |
+  LDY !s_oam_next_free_slot_ptr             ; $17D007 |
   LDA $1109                                 ; $17D00A |
   AND #$00FF                                ; $17D00D |
   SEC                                       ; $17D010 |
@@ -9129,7 +9153,7 @@ CODE_17D052:
   TYA                                       ; $17D07B |
   CLC                                       ; $17D07C |
   ADC #$0020                                ; $17D07D |
-  STA $6092                                 ; $17D080 |
+  STA !s_oam_next_free_slot_ptr             ; $17D080 |
   SEP #$30                                  ; $17D083 |
   LDA #$20                                  ; $17D085 |
   STA $1122                                 ; $17D087 |
@@ -9222,25 +9246,25 @@ CODE_17D164:
   STA $06                                   ; $17D178 |
   LDA #$0C00                                ; $17D17A |
   STA $0C                                   ; $17D17D |
-  LDX $0218                                 ; $17D17F |
+  LDX !r_cur_world                          ; $17D17F |
   TYA                                       ; $17D182 |
   LSR A                                     ; $17D183 |
   CLC                                       ; $17D184 |
   ADC $E198,x                               ; $17D185 |
   TAY                                       ; $17D188 |
-  LDA $02B8,y                               ; $17D189 |
+  LDA !r_stage_scores,y                     ; $17D189 |
   AND #$00FF                                ; $17D18C |
   CMP #$001E                                ; $17D18F |
   BCS CODE_17D1B0                           ; $17D192 |
   LDA $0E                                   ; $17D194 |
   CMP #$0010                                ; $17D196 |
   BNE CODE_17D1A3                           ; $17D199 |
-  LDA $02B8,y                               ; $17D19B |
+  LDA !r_stage_scores,y                     ; $17D19B |
   AND #$00FF                                ; $17D19E |
   BEQ CODE_17D1B0                           ; $17D1A1 |
 
 CODE_17D1A3:
-  LDA $0222,y                               ; $17D1A3 |
+  LDA !r_stages_unlocked,y                  ; $17D1A3 |
   AND #$007F                                ; $17D1A6 |
   BEQ CODE_17D1B0                           ; $17D1A9 |
   LDA #$1000                                ; $17D1AB |
@@ -9327,7 +9351,7 @@ CODE_17D246:
   ADC #$0040                                ; $17D24F |
   STA $04                                   ; $17D252 |
   LDY #$00                                  ; $17D254 |
-  LDX $0218                                 ; $17D256 |
+  LDX !r_cur_world                          ; $17D256 |
   LDA $C9EA,x                               ; $17D259 |
   STA $06                                   ; $17D25C |
 
@@ -9415,7 +9439,7 @@ CODE_17D2D8:
 CODE_17D2EC:
   JSR CODE_17D3E4                           ; $17D2EC |
   STZ $1120                                 ; $17D2EF |
-  LDA $0218                                 ; $17D2F2 |
+  LDA !r_cur_world                          ; $17D2F2 |
   LSR A                                     ; $17D2F5 |
   TAX                                       ; $17D2F6 |
 
@@ -9427,7 +9451,7 @@ CODE_17D2F7:
   CLC                                       ; $17D301 |
   ADC $E187,x                               ; $17D302 |
   TAY                                       ; $17D305 |
-  LDA $030F,y                               ; $17D306 |
+  LDA !r_map_icon_gfx,y                     ; $17D306 |
   BEQ CODE_17D2F7                           ; $17D309 |
   CMP #$F0                                  ; $17D30B |
   BEQ CODE_17D31A                           ; $17D30D |
@@ -9465,10 +9489,10 @@ CODE_17D33C:
 
 CODE_17D340:
   REP #$20                                  ; $17D340 |
-  LDY $0218                                 ; $17D342 |
+  LDY !r_cur_world                          ; $17D342 |
   LDA $DBA3,y                               ; $17D345 |
   STA $00                                   ; $17D348 |
-  LDA $0218                                 ; $17D34A |
+  LDA !r_cur_world                          ; $17D34A |
   LSR A                                     ; $17D34D |
   TAY                                       ; $17D34E |
   PHY                                       ; $17D34F |
@@ -9477,7 +9501,7 @@ CODE_17D340:
   ADC $111F                                 ; $17D354 |
   AND #$00FF                                ; $17D357 |
   TAX                                       ; $17D35A |
-  LDA $030F,x                               ; $17D35B |
+  LDA !r_map_icon_gfx,x                     ; $17D35B |
   DEC A                                     ; $17D35E |
   AND #$007F                                ; $17D35F |
   TAY                                       ; $17D362 |
@@ -9497,7 +9521,7 @@ CODE_17D37C:
   AND #$00FF                                ; $17D382 |
   STA !gsu_r2                               ; $17D385 |
   PLY                                       ; $17D388 |
-  LDA $030F,x                               ; $17D389 |
+  LDA !r_map_icon_gfx,x                     ; $17D389 |
   CLC                                       ; $17D38C |
   ADC $E187,y                               ; $17D38D |
   DEC A                                     ; $17D390 |
@@ -9529,7 +9553,7 @@ CODE_17D37C:
 CODE_17D3E4:
   LDY $111F                                 ; $17D3E4 |
   REP #$20                                  ; $17D3E7 |
-  LDX $0218                                 ; $17D3E9 |
+  LDX !r_cur_world                          ; $17D3E9 |
   TYA                                       ; $17D3EC |
   CLC                                       ; $17D3ED |
   ADC $E198,x                               ; $17D3EE |
@@ -9540,7 +9564,7 @@ CODE_17D3E4:
   STA $00                                   ; $17D3FA |
   INC A                                     ; $17D3FC |
   STA $02                                   ; $17D3FD |
-  LDA $02B8,y                               ; $17D3FF |
+  LDA !r_stage_scores,y                     ; $17D3FF |
   AND #$00FF                                ; $17D402 |
   CMP #$0064                                ; $17D405 |
   BCS CODE_17D41A                           ; $17D408 |
@@ -9578,7 +9602,7 @@ CODE_17D42F:
   LDA #$0C00                                ; $17D43B |
   STA $04                                   ; $17D43E |
   LDY $10                                   ; $17D440 |
-  LDA $02B8,y                               ; $17D442 |
+  LDA !r_stage_scores,y                     ; $17D442 |
   AND #$00FF                                ; $17D445 |
   CMP #$001E                                ; $17D448 |
   BCS CODE_17D452                           ; $17D44B |
@@ -9588,7 +9612,7 @@ CODE_17D42F:
 CODE_17D452:
   ASL $00                                   ; $17D452 |
   ASL $02                                   ; $17D454 |
-  LDX $0218                                 ; $17D456 |
+  LDX !r_cur_world                          ; $17D456 |
   LDA $E198,x                               ; $17D459 |
   STA $08                                   ; $17D45C |
   LDY #$00                                  ; $17D45E |
@@ -9603,12 +9627,12 @@ CODE_17D452:
   AND #$00FF                                ; $17D471 |
   CMP #$0008                                ; $17D474 |
   BNE CODE_17D481                           ; $17D477 |
-  LDA $02B8,x                               ; $17D479 |
+  LDA !r_stage_scores,x                     ; $17D479 |
   AND #$00FF                                ; $17D47C |
   BEQ CODE_17D492                           ; $17D47F |
 
 CODE_17D481:
-  LDA $0222,x                               ; $17D481 |
+  LDA !r_stages_unlocked,x                  ; $17D481 |
   AND #$007F                                ; $17D484 |
   BEQ CODE_17D492                           ; $17D487 |
   LDA #$21AE                                ; $17D489 |
@@ -9634,12 +9658,12 @@ CODE_17D49C:
   AND #$00FF                                ; $17D4A9 |
   CMP #$0008                                ; $17D4AC |
   BNE CODE_17D4B9                           ; $17D4AF |
-  LDA $02B8,x                               ; $17D4B1 |
+  LDA !r_stage_scores,x                     ; $17D4B1 |
   AND #$00FF                                ; $17D4B4 |
   BEQ CODE_17D4D1                           ; $17D4B7 |
 
 CODE_17D4B9:
-  LDA $0222,x                               ; $17D4B9 |
+  LDA !r_stages_unlocked,x                  ; $17D4B9 |
   AND #$007F                                ; $17D4BC |
   BEQ CODE_17D4D1                           ; $17D4BF |
   LDX $00,y                                 ; $17D4C1 |
@@ -9719,7 +9743,7 @@ CODE_17D52B:
   dw $0C00, $1000                           ; $17D54A |
 
 CODE_17D54E:
-  LDA $30                                   ; $17D54E |
+  LDA !r_frame_counter_global_dp            ; $17D54E |
   AND #$04                                  ; $17D550 |
   LSR A                                     ; $17D552 |
   TAX                                       ; $17D553 |
@@ -9737,13 +9761,13 @@ CODE_17D554:
 CODE_17D568:
   LDA $D54A,x                               ; $17D568 |
   STA $10                                   ; $17D56B |
-  LDY $0218                                 ; $17D56D |
+  LDY !r_cur_world                          ; $17D56D |
   LDA $E198,y                               ; $17D570 |
   TAY                                       ; $17D573 |
   LDX #$00                                  ; $17D574 |
 
 CODE_17D576:
-  LDA $02B8,y                               ; $17D576 |
+  LDA !r_stage_scores,y                     ; $17D576 |
   AND #$00FF                                ; $17D579 |
   CMP #$0064                                ; $17D57C |
   BNE CODE_17D584                           ; $17D57F |
@@ -9858,7 +9882,7 @@ CODE_17D647:
   JSR CODE_17D005                           ; $17D648 |
   JSR CODE_17D6C4                           ; $17D64B |
   STZ $1120                                 ; $17D64E |
-  LDA $0218                                 ; $17D651 |
+  LDA !r_cur_world                          ; $17D651 |
   LSR A                                     ; $17D654 |
   TAX                                       ; $17D655 |
 
@@ -9870,7 +9894,7 @@ CODE_17D656:
   CLC                                       ; $17D660 |
   ADC $E187,x                               ; $17D661 |
   TAY                                       ; $17D664 |
-  LDA $030F,y                               ; $17D665 |
+  LDA !r_map_icon_gfx,y                     ; $17D665 |
   BEQ CODE_17D656                           ; $17D668 |
   CMP #$F0                                  ; $17D66A |
   BEQ CODE_17D682                           ; $17D66C |
@@ -9905,12 +9929,12 @@ CODE_17D6A2:
   PHP                                       ; $17D6A2 |
   REP #$30                                  ; $17D6A3 |
   PHX                                       ; $17D6A5 |
-  LDX $0218                                 ; $17D6A6 |
+  LDX !r_cur_world                          ; $17D6A6 |
   LDA $E198,x                               ; $17D6A9 |
   CLC                                       ; $17D6AC |
   ADC $10                                   ; $17D6AD |
   TAX                                       ; $17D6AF |
-  LDA $0222,x                               ; $17D6B0 |
+  LDA !r_stages_unlocked,x                  ; $17D6B0 |
   AND #$0080                                ; $17D6B3 |
   BEQ CODE_17D6BB                           ; $17D6B6 |
   LDA #$1400                                ; $17D6B8 |
@@ -9926,7 +9950,7 @@ CODE_17D6BB:
 
 CODE_17D6C4:
   REP #$20                                  ; $17D6C4 |
-  LDX $0218                                 ; $17D6C6 |
+  LDX !r_cur_world                          ; $17D6C6 |
   LDA $DC43,x                               ; $17D6C9 |
   STA $02                                   ; $17D6CC |
   LDA $111F                                 ; $17D6CE |
@@ -9938,7 +9962,7 @@ CODE_17D6C4:
   ASL A                                     ; $17D6DC |
   TAX                                       ; $17D6DD |
   PHX                                       ; $17D6DE |
-  LDA $030F,y                               ; $17D6DF |
+  LDA !r_map_icon_gfx,y                     ; $17D6DF |
   DEC A                                     ; $17D6E2 |
   AND #$007F                                ; $17D6E3 |
   STA $10                                   ; $17D6E6 |
@@ -9998,7 +10022,7 @@ CODE_17D73C:
   CLC                                       ; $17D744 |
   ADC #$0040                                ; $17D745 |
   STA $04                                   ; $17D748 |
-  LDX $0218                                 ; $17D74A |
+  LDX !r_cur_world                          ; $17D74A |
   LDA $C9EA,x                               ; $17D74D |
   STA $06                                   ; $17D750 |
   LDY #$00                                  ; $17D752 |
@@ -10030,7 +10054,7 @@ CODE_17D769:
 
 CODE_17D780:
   REP #$30                                  ; $17D780 |
-  LDX $6092                                 ; $17D782 |
+  LDX !s_oam_next_free_slot_ptr             ; $17D782 |
   LDA $111F                                 ; $17D785 |
   AND #$00FF                                ; $17D788 |
   ASL A                                     ; $17D78B |
@@ -10056,14 +10080,14 @@ CODE_17D780:
   STA $6012,x                               ; $17D7BB |
   STA $601A,x                               ; $17D7BE |
   STZ $02                                   ; $17D7C1 |
-  LDY $0218                                 ; $17D7C3 |
+  LDY !r_cur_world                          ; $17D7C3 |
   PHY                                       ; $17D7C6 |
   LDA $111F                                 ; $17D7C7 |
   AND #$00FF                                ; $17D7CA |
   CLC                                       ; $17D7CD |
   ADC $E198,y                               ; $17D7CE |
   TAY                                       ; $17D7D1 |
-  LDA $02B8,y                               ; $17D7D2 |
+  LDA !r_stage_scores,y                     ; $17D7D2 |
   AND #$00FF                                ; $17D7D5 |
   CMP #$001E                                ; $17D7D8 |
   BCS CODE_17D7FA                           ; $17D7DB |
@@ -10071,12 +10095,12 @@ CODE_17D780:
   AND #$00FF                                ; $17D7E0 |
   CMP #$0008                                ; $17D7E3 |
   BNE CODE_17D7F0                           ; $17D7E6 |
-  LDA $02B8,y                               ; $17D7E8 |
+  LDA !r_stage_scores,y                     ; $17D7E8 |
   AND #$00FF                                ; $17D7EB |
   BEQ CODE_17D7FA                           ; $17D7EE |
 
 CODE_17D7F0:
-  LDA $0222,y                               ; $17D7F0 |
+  LDA !r_stages_unlocked,y                  ; $17D7F0 |
   AND #$007F                                ; $17D7F3 |
   BEQ CODE_17D7FA                           ; $17D7F6 |
   INC $02                                   ; $17D7F8 |
@@ -10085,13 +10109,13 @@ CODE_17D7FA:
   PLY                                       ; $17D7FA |
   LDA $DC43,y                               ; $17D7FB |
   STA $00                                   ; $17D7FE |
-  LDY $0218                                 ; $17D800 |
+  LDY !r_cur_world                          ; $17D800 |
   LDA $111F                                 ; $17D803 |
   AND #$00FF                                ; $17D806 |
   CLC                                       ; $17D809 |
   ADC $E198,y                               ; $17D80A |
   TAY                                       ; $17D80D |
-  LDA $030F,y                               ; $17D80E |
+  LDA !r_map_icon_gfx,y                     ; $17D80E |
   DEC A                                     ; $17D811 |
   AND #$007F                                ; $17D812 |
   STA $10                                   ; $17D815 |
@@ -10142,7 +10166,7 @@ CODE_17D841:
   TXA                                       ; $17D862 |
   CLC                                       ; $17D863 |
   ADC #$0020                                ; $17D864 |
-  STA $6092                                 ; $17D867 |
+  STA !s_oam_next_free_slot_ptr             ; $17D867 |
   SEP #$30                                  ; $17D86A |
   RTS                                       ; $17D86C |
 
@@ -10168,7 +10192,7 @@ CODE_17D885:
 
 CODE_17D888:
   REP #$20                                  ; $17D888 |
-  LDA $0222,y                               ; $17D88A |
+  LDA !r_stages_unlocked,y                  ; $17D88A |
   ORA $0224,y                               ; $17D88D |
   ORA $0226,y                               ; $17D890 |
   ORA $0228,y                               ; $17D893 |
@@ -10227,7 +10251,7 @@ CODE_17D8FC:
   TAX                                       ; $17D902 |
   CPX #$0030                                ; $17D903 |
   BNE CODE_17D8CD                           ; $17D906 |
-  LDX $0218                                 ; $17D908 |
+  LDX !r_cur_world                          ; $17D908 |
   LDA $DD27,x                               ; $17D90B |
   STA $00                                   ; $17D90E |
   LDA $C9EA,x                               ; $17D910 |
@@ -10311,7 +10335,7 @@ CODE_17D95E:
 
 CODE_17D9B3:
   STY $00                                   ; $17D9B3 |
-  LDY $0218                                 ; $17D9B5 |
+  LDY !r_cur_world                          ; $17D9B5 |
 
 CODE_17D9B8:
   LDA ($00)                                 ; $17D9B8 |
@@ -10341,7 +10365,7 @@ CODE_17D9B8:
   LDY #$0000                                ; $17D9E6 |
 
 CODE_17D9E9:
-  LDA $0218                                 ; $17D9E9 |
+  LDA !r_cur_world                          ; $17D9E9 |
   CMP #$0004                                ; $17D9EC |
   BEQ CODE_17D9FB                           ; $17D9EF |
   CMP #$0006                                ; $17D9F1 |
@@ -10389,7 +10413,7 @@ CODE_17DA03:
   CPY #$000A                                ; $17DA4A |
   BCC CODE_17D9E9                           ; $17DA4D |
   LDX $10                                   ; $17DA4F |
-  LDA $0218                                 ; $17DA51 |
+  LDA !r_cur_world                          ; $17DA51 |
   LSR A                                     ; $17DA54 |
   ORA #$21E0                                ; $17DA55 |
   ORA $02                                   ; $17DA58 |
@@ -10417,10 +10441,10 @@ CODE_17DA65:
   INY                                       ; $17DA89 |
   CPY #$0006                                ; $17DA8A |
   BCC CODE_17DA65                           ; $17DA8D |
-  LDA $0118                                 ; $17DA8F |
+  LDA !r_game_mode                          ; $17DA8F |
   CMP #$0023                                ; $17DA92 |
   BCS CODE_17DAD2                           ; $17DA95 |
-  LDX $0218                                 ; $17DA97 |
+  LDX !r_cur_world                          ; $17DA97 |
   LDA $17E198,x                             ; $17DA9A |
   TAX                                       ; $17DA9E |
   STA $02                                   ; $17DA9F |
@@ -10431,7 +10455,7 @@ CODE_17DA65:
   STZ $00                                   ; $17DAAC |
 
 CODE_17DAAE:
-  LDA $02B8,x                               ; $17DAAE |
+  LDA !r_stage_scores,x                     ; $17DAAE |
   AND #$00FF                                ; $17DAB1 |
   CLC                                       ; $17DAB4 |
   ADC $00                                   ; $17DAB5 |
@@ -10450,7 +10474,7 @@ CODE_17DAAE:
 
 CODE_17DAD2:
   SEP #$10                                  ; $17DAD2 |
-  LDA $0218                                 ; $17DAD4 |
+  LDA !r_cur_world                          ; $17DAD4 |
   STA !gsu_r9                               ; $17DAD7 |
   TAX                                       ; $17DADA |
   LDA #$0017                                ; $17DADB |
@@ -10462,7 +10486,7 @@ CODE_17DAD2:
   JSL r_gsu_init_1                          ; $17DAEC | GSU init
   LDA #$0015                                ; $17DAF0 |
   STA !gsu_r0                               ; $17DAF3 |
-  LDX $6082                                 ; $17DAF6 |
+  LDX !s_control_scheme                     ; $17DAF6 |
   LDA $DC03,x                               ; $17DAF9 |
   STA !gsu_r10                              ; $17DAFC |
   LDX #$08                                  ; $17DAFF |
@@ -10470,7 +10494,7 @@ CODE_17DAD2:
   JSL r_gsu_init_1                          ; $17DB04 | GSU init
   SEP #$20                                  ; $17DB08 |
   JSR CODE_17C946                           ; $17DB0A |
-  LDA $0218                                 ; $17DB0D |
+  LDA !r_cur_world                          ; $17DB0D |
   LSR A                                     ; $17DB10 |
   TAX                                       ; $17DB11 |
   LDA $E187,x                               ; $17DB12 |
@@ -10483,7 +10507,7 @@ CODE_17DAD2:
   STA $0317,y                               ; $17DB23 |
 
 CODE_17DB26:
-  LDX $0218                                 ; $17DB26 |
+  LDX !r_cur_world                          ; $17DB26 |
   LDA $DC43,x                               ; $17DB29 |
   STA $04                                   ; $17DB2C |
   LDA #$000C                                ; $17DB2E |
@@ -10491,7 +10515,7 @@ CODE_17DB26:
   STZ $06                                   ; $17DB33 |
 
 CODE_17DB35:
-  LDA $030F,y                               ; $17DB35 |
+  LDA !r_map_icon_gfx,y                     ; $17DB35 |
   AND #$00FF                                ; $17DB38 |
   CMP #$00F0                                ; $17DB3B |
   BEQ CODE_17DB8D                           ; $17DB3E |
@@ -10801,7 +10825,7 @@ CODE_17DC0B:
   dw $61EE                                  ; $17E00D |
 
 CODE_17E00F:
-  LDA $093D                                 ; $17E00F |
+  LDA !r_joy1_hi                            ; $17E00F |
   AND #$20                                  ; $17E012 |
   BEQ CODE_17E019                           ; $17E014 |
   JMP CODE_17E14A                           ; $17E016 |
@@ -10827,20 +10851,20 @@ CODE_17E032:
   JMP CODE_17E17F                           ; $17E03B |
 
 CODE_17E03E:
-  LDA $37                                   ; $17E03E |
-  AND #$C0                                  ; $17E040 |
-  ORA $38                                   ; $17E042 |
-  AND #$D0                                  ; $17E044 |
-  BEQ CODE_17E07B                           ; $17E046 |
-  STA $0979                                 ; $17E048 |
-  LDA $0218                                 ; $17E04B |
+  LDA $37                                   ; $17E03E |\
+  AND #$C0                                  ; $17E040 | | newpressing A, X, Y, B, or Start?
+  ORA $38                                   ; $17E042 | | if not, branch
+  AND #$D0                                  ; $17E044 | |
+  BEQ CODE_17E07B                           ; $17E046 |/
+  STA $0979                                 ; $17E048 | store a flag that "we have selected a stage"
+  LDA !r_cur_world                          ; $17E04B |
   LSR A                                     ; $17E04E |
   TAX                                       ; $17E04F |
   LDA $E187,x                               ; $17E050 |
   CLC                                       ; $17E053 |
   ADC $1112                                 ; $17E054 |
   TAY                                       ; $17E057 |
-  LDA $030F,y                               ; $17E058 |
+  LDA !r_map_icon_gfx,y                     ; $17E058 |
   BEQ CODE_17E07B                           ; $17E05B |
   CMP #$FF                                  ; $17E05D |
   BEQ CODE_17E07B                           ; $17E05F |
@@ -10848,7 +10872,7 @@ CODE_17E03E:
   DEC A                                     ; $17E063 |
   CLC                                       ; $17E064 |
   ADC $E187,x                               ; $17E065 |
-  STA $021A                                 ; $17E068 |
+  STA !r_cur_stage                          ; $17E068 |
   LDA #$02                                  ; $17E06B |
   STA $1113                                 ; $17E06D |
   STZ $1114                                 ; $17E070 |
@@ -10943,7 +10967,7 @@ CODE_17E0E6:
   BRA CODE_17E13B                           ; $17E106 |
 
 CODE_17E108:
-  LDA $0218                                 ; $17E108 |
+  LDA !r_cur_world                          ; $17E108 |
   ASL A                                     ; $17E10B |
   ASL A                                     ; $17E10C |
   ORA $1112                                 ; $17E10D |
@@ -10951,7 +10975,7 @@ CODE_17E108:
   LDA $E4FB,x                               ; $17E111 |
   EOR #$03                                  ; $17E114 |
   STA $111A                                 ; $17E116 |
-  LDA $0218                                 ; $17E119 |
+  LDA !r_cur_world                          ; $17E119 |
   INC A                                     ; $17E11C |
   INC A                                     ; $17E11D |
   STA $1117                                 ; $17E11E |
@@ -10959,7 +10983,7 @@ CODE_17E108:
 
 CODE_17E123:
   TAY                                       ; $17E123 |
-  LDX $0218                                 ; $17E124 |
+  LDX !r_cur_world                          ; $17E124 |
   REP #$20                                  ; $17E127 |
   LDA $C93A,x                               ; $17E129 |
   STA $10                                   ; $17E12C |
@@ -10979,7 +11003,7 @@ CODE_17E13B:
   BRA CODE_17E17F                           ; $17E148 |
 
 CODE_17E14A:
-  LDA $093D                                 ; $17E14A |
+  LDA !r_joy1_hi                            ; $17E14A |
   AND #$20                                  ; $17E14D |
   BEQ CODE_17E17F                           ; $17E14F |
   LDX $118E                                 ; $17E151 |
@@ -11023,7 +11047,7 @@ CODE_17E182:
 
 CODE_17E1A6:
   STX $1112                                 ; $17E1A6 |
-  LDY $0218                                 ; $17E1A9 |
+  LDY !r_cur_world                          ; $17E1A9 |
   REP #$20                                  ; $17E1AC |
   LDA $C93A,y                               ; $17E1AE |
   STA $10                                   ; $17E1B1 |
@@ -11142,7 +11166,7 @@ CODE_17E253:
 
 CODE_17E27B:
   REP #$30                                  ; $17E27B |
-  LDX $6092                                 ; $17E27D |
+  LDX !s_oam_next_free_slot_ptr             ; $17E27D |
   LDA $1109                                 ; $17E280 |
   AND #$00FF                                ; $17E283 |
   STA $6000,x                               ; $17E286 |
@@ -11182,7 +11206,7 @@ CODE_17E2C4:
   TXA                                       ; $17E2CE |
   CLC                                       ; $17E2CF |
   ADC #$0008                                ; $17E2D0 |
-  STA $6092                                 ; $17E2D3 |
+  STA !s_oam_next_free_slot_ptr             ; $17E2D3 |
   SEP #$30                                  ; $17E2D6 |
   RTS                                       ; $17E2D8 |
 
@@ -11217,7 +11241,7 @@ CODE_17E314:
   SBC $00                                   ; $17E326 |
   STA $1145                                 ; $17E328 |
   REP #$20                                  ; $17E32B |
-  LDX $6092                                 ; $17E32D |
+  LDX !s_oam_next_free_slot_ptr             ; $17E32D |
   LDA #$0000                                ; $17E330 |
   CLC                                       ; $17E333 |
   ADC $00                                   ; $17E334 |
@@ -11234,7 +11258,7 @@ CODE_17E314:
   SEC                                       ; $17E34E |
   SBC $00                                   ; $17E34F |
   JSR CODE_17E3FF                           ; $17E351 |
-  LDX $6092                                 ; $17E354 |
+  LDX !s_oam_next_free_slot_ptr             ; $17E354 |
   LDA #$0030                                ; $17E357 |
   JSR CODE_17E427                           ; $17E35A |
   LDA #$0040                                ; $17E35D |
@@ -11273,7 +11297,7 @@ CODE_17E3A7:
   LDA $E305,x                               ; $17E3A9 |
   STA $00                                   ; $17E3AC |
   STZ $08                                   ; $17E3AE |
-  LDX $6092                                 ; $17E3B0 |
+  LDX !s_oam_next_free_slot_ptr             ; $17E3B0 |
   LDY #$0000                                ; $17E3B3 |
   JSR CODE_17E43A                           ; $17E3B6 |
   INC $08                                   ; $17E3B9 |
@@ -11288,7 +11312,7 @@ CODE_17E3A7:
   DEC $08                                   ; $17E3D0 |
   LDY #$0000                                ; $17E3D2 |
   JSR CODE_17E43A                           ; $17E3D5 |
-  LDX $6092                                 ; $17E3D8 |
+  LDX !s_oam_next_free_slot_ptr             ; $17E3D8 |
   INX                                       ; $17E3DB |
   INX                                       ; $17E3DC |
   INX                                       ; $17E3DD |
@@ -11304,10 +11328,10 @@ CODE_17E3A7:
   JSR CODE_17E3FF                           ; $17E3ED |
   TYA                                       ; $17E3F0 |
   JSR CODE_17E3FF                           ; $17E3F1 |
-  LDA $6092                                 ; $17E3F4 |
+  LDA !s_oam_next_free_slot_ptr             ; $17E3F4 |
   CLC                                       ; $17E3F7 |
   ADC #$0160                                ; $17E3F8 |
-  STA $6092                                 ; $17E3FB |
+  STA !s_oam_next_free_slot_ptr             ; $17E3FB |
   RTL                                       ; $17E3FE |
 
 CODE_17E3FF:
@@ -11362,8 +11386,8 @@ CODE_17E43C:
 
 CODE_17E458:
   LDA $38                                   ; $17E458 |
-  AND #$F003                                ; $17E45A |
-  PHA                                       ; $17E45D |
+  AND #$03                                  ; $17E45A |
+  BEQ CODE_17E4A6                           ; $17E45C |
   TAX                                       ; $17E45E |
   LDA $1117                                 ; $17E45F |
 
@@ -11381,7 +11405,7 @@ CODE_17E462:
   LDA $E186,y                               ; $17E475 |
   TAY                                       ; $17E478 |
   REP #$20                                  ; $17E479 |
-  LDA $0222,y                               ; $17E47B |
+  LDA !r_stages_unlocked,y                  ; $17E47B |
   ORA $0224,y                               ; $17E47E |
   ORA $0226,y                               ; $17E481 |
   ORA $0228,y                               ; $17E484 |
@@ -11405,6 +11429,8 @@ CODE_17E49E:
 CODE_17E4A0:
   JSL push_sound_queue                      ; $17E4A0 |/
   BRA CODE_17E4FA                           ; $17E4A4 |
+
+CODE_17E4A6:
   LDA $38                                   ; $17E4A6 |
   AND #$04                                  ; $17E4A8 |
   BEQ CODE_17E4CB                           ; $17E4AA |
@@ -11431,13 +11457,13 @@ CODE_17E4CB:
   LDA $1117                                 ; $17E4D3 |
   DEC A                                     ; $17E4D6 |
   DEC A                                     ; $17E4D7 |
-  CMP $0218                                 ; $17E4D8 |
+  CMP !r_cur_world                          ; $17E4D8 |
   BEQ CODE_17E4FA                           ; $17E4DB |
-  STA $0218                                 ; $17E4DD |
+  STA !r_cur_world                          ; $17E4DD |
   LSR A                                     ; $17E4E0 |
   TAX                                       ; $17E4E1 |
   LDA $E187,x                               ; $17E4E2 |
-  STA $021A                                 ; $17E4E5 |
+  STA !r_cur_stage                          ; $17E4E5 |
   STZ $1112                                 ; $17E4E8 |
   STZ $110B                                 ; $17E4EB |
   STZ $1123                                 ; $17E4EE |
@@ -11458,7 +11484,7 @@ CODE_17E4FA:
 
 CODE_17E533:
   REP #$30                                  ; $17E533 |
-  LDX $6092                                 ; $17E535 |
+  LDX !s_oam_next_free_slot_ptr             ; $17E535 |
   LDA $1109                                 ; $17E538 |
   AND #$00FF                                ; $17E53B |
   SEC                                       ; $17E53E |
@@ -11479,7 +11505,7 @@ CODE_17E533:
   ADC #$0010                                ; $17E563 |
   STA $6012,x                               ; $17E566 |
   STA $601A,x                               ; $17E569 |
-  LDY $0218                                 ; $17E56C |
+  LDY !r_cur_world                          ; $17E56C |
   LDA $DC43,y                               ; $17E56F |
   STA $04                                   ; $17E572 |
   LDA $1119                                 ; $17E574 |
@@ -11490,7 +11516,7 @@ CODE_17E533:
   ADC $1112                                 ; $17E580 |
   AND #$00FF                                ; $17E583 |
   TAY                                       ; $17E586 |
-  LDA $030F,y                               ; $17E587 |
+  LDA !r_map_icon_gfx,y                     ; $17E587 |
   AND #$007F                                ; $17E58A |
 
 CODE_17E58D:
@@ -11527,7 +11553,7 @@ CODE_17E59E:
   TXA                                       ; $17E5C7 |
   CLC                                       ; $17E5C8 |
   ADC #$0020                                ; $17E5C9 |
-  STA $6092                                 ; $17E5CC |
+  STA !s_oam_next_free_slot_ptr             ; $17E5CC |
   SEP #$30                                  ; $17E5CF |
   RTS                                       ; $17E5D1 |
 
@@ -11551,7 +11577,7 @@ CODE_17E5E8:
   CLC                                       ; $17E5F0 |
   ADC #$0040                                ; $17E5F1 |
   STA $04                                   ; $17E5F4 |
-  LDY $0218                                 ; $17E5F6 |
+  LDY !r_cur_world                          ; $17E5F6 |
   LDA $C9EA,y                               ; $17E5F9 |
   STA $06                                   ; $17E5FC |
   LDY #$00                                  ; $17E5FE |
@@ -11597,7 +11623,7 @@ CODE_17E61E:
   RTL                                       ; $17E645 |
 
   REP #$20                                  ; $17E646 |
-  LDX $0218                                 ; $17E648 |
+  LDX !r_cur_world                          ; $17E648 |
   LDA $DBA3,x                               ; $17E64B |
   STA $00                                   ; $17E64E |
   LDA $1112                                 ; $17E650 |
@@ -11674,7 +11700,7 @@ CODE_17E6DA:
   SBC $1112                                 ; $17E6E6 |
   STA $1112                                 ; $17E6E9 |
   TAY                                       ; $17E6EC |
-  LDX $0218                                 ; $17E6ED |
+  LDX !r_cur_world                          ; $17E6ED |
   REP #$20                                  ; $17E6F0 |
   LDA $C93A,x                               ; $17E6F2 |
   STA $00                                   ; $17E6F5 |
@@ -11714,26 +11740,26 @@ CODE_17E70F:
   STA $110D                                 ; $17E725 |
   RTS                                       ; $17E728 |
 
-  LDX $021A                                 ; $17E729 |
-  LDA $028000,x                             ; $17E72C |
-  STA $0383                                 ; $17E730 |
+  LDX !r_cur_stage                          ; $17E729 |\  x = current level #
+  LDA yoshi_level_colors,x                  ; $17E72C | | pull Yoshi color from level table
+  STA !r_yoshi_color                        ; $17E730 |/  set Yoshi color
   JSR CODE_17E5D2                           ; $17E733 |
   INC $111D                                 ; $17E736 |
   REP #$20                                  ; $17E739 |
   STZ $110E                                 ; $17E73B |
   LDA #$0100                                ; $17E73E |
   STA $1110                                 ; $17E741 |
-  LDX $0218                                 ; $17E744 |
+  LDX !r_cur_world                          ; $17E744 |
   REP #$20                                  ; $17E747 |
   LDA $DBA3,x                               ; $17E749 |
   STA $00                                   ; $17E74C |
-  LDX $0218                                 ; $17E74E |
+  LDX !r_cur_world                          ; $17E74E |
   LDA $E198,x                               ; $17E751 |
   CLC                                       ; $17E754 |
   ADC $1112                                 ; $17E755 |
   AND #$00FF                                ; $17E758 |
   TAY                                       ; $17E75B |
-  LDA $030F,y                               ; $17E75C |
+  LDA !r_map_icon_gfx,y                     ; $17E75C |
   AND #$007F                                ; $17E75F |
   DEC A                                     ; $17E762 |
   TAY                                       ; $17E763 |
@@ -11815,7 +11841,7 @@ CODE_17E7FA:
   RTS                                       ; $17E7FA |
 
 CODE_17E7FB:
-  LDY $0218                                 ; $17E7FB |
+  LDY !r_cur_world                          ; $17E7FB |
   LDA $C93A,y                               ; $17E7FE |
   STA $0A                                   ; $17E801 |
   LDY #$00                                  ; $17E803 |
@@ -12228,7 +12254,7 @@ CODE_17EB5F:
   LDA #$32                                  ; $17EB90 |\ play sound #$0032
   JSL push_sound_queue                      ; $17EB92 |/
   STZ $1107                                 ; $17EB96 |
-  LDX $6082                                 ; $17EB99 |
+  LDX !s_control_scheme                     ; $17EB99 |
   LDA $EB85,x                               ; $17EB9C |
   JSR CODE_17CFDA                           ; $17EB9F |
   STZ $1122                                 ; $17EBA2 |
@@ -12237,7 +12263,7 @@ CODE_17EB5F:
 
   JSR CODE_17ECA1                           ; $17EBA9 |
   STZ $6083                                 ; $17EBAC |
-  LDA $6082                                 ; $17EBAF |
+  LDA !s_control_scheme                     ; $17EBAF |
   LSR A                                     ; $17EBB2 |
   STA $112D                                 ; $17EBB3 |
   BRA CODE_17EBCB                           ; $17EBB6 |
@@ -12250,7 +12276,7 @@ CODE_17EB5F:
   STA $1106                                 ; $17EBC8 |
 
 CODE_17EBCB:
-  LDX $6082                                 ; $17EBCB |
+  LDX !s_control_scheme                     ; $17EBCB |
   LDA $EB85,x                               ; $17EBCE |
   TAX                                       ; $17EBD1 |
 
@@ -12270,7 +12296,7 @@ CODE_17EBE7:
   JSR CODE_17CFDA                           ; $17EBE8 |
   RTS                                       ; $17EBEB |
 
-  LDX $6082                                 ; $17EBEC |
+  LDX !s_control_scheme                     ; $17EBEC |
   LDA $EB85,x                               ; $17EBEF |
   TAX                                       ; $17EBF2 |
 
@@ -12285,9 +12311,9 @@ CODE_17EBF3:
   BPL CODE_17EC21                           ; $17EC04 |
   INC $1118                                 ; $17EC06 |
   LDA #$13                                  ; $17EC09 |
-  STA $0969                                 ; $17EC0B |
+  STA !r_reg_tmw_mirror                     ; $17EC0B |
   LDA #$82                                  ; $17EC0E |
-  STA $0966                                 ; $17EC10 |
+  STA !r_reg_wobjsel_mirror                 ; $17EC10 |
   STZ $1107                                 ; $17EC13 |
   REP #$20                                  ; $17EC16 |
   LDA #$FF00                                ; $17EC18 |
@@ -12321,9 +12347,9 @@ CODE_17EC26:
   INC $1118                                 ; $17EC53 |
   STZ $1107                                 ; $17EC56 |
   LDA #$00                                  ; $17EC59 |
-  STA $0969                                 ; $17EC5B |
+  STA !r_reg_tmw_mirror                     ; $17EC5B |
   LDA #$80                                  ; $17EC5E |
-  STA $0966                                 ; $17EC60 |
+  STA !r_reg_wobjsel_mirror                 ; $17EC60 |
   REP #$20                                  ; $17EC63 |
   LDA #$4AD4                                ; $17EC65 |
   STA $1109                                 ; $17EC68 |
@@ -12396,7 +12422,7 @@ CODE_17ECDE:
   LDA $38                                   ; $17ECDE |
   AND #$08                                  ; $17ECE0 |
   BEQ CODE_17ED01                           ; $17ECE2 |
-  LDA $6082                                 ; $17ECE4 |
+  LDA !s_control_scheme                     ; $17ECE4 |
   TAX                                       ; $17ECE7 |
   LSR A                                     ; $17ECE8 |
   STA $112D                                 ; $17ECE9 |
@@ -12471,7 +12497,7 @@ CODE_17ED51:
   STA $1106                                 ; $17ED75 |
   JSR CODE_17D005                           ; $17ED78 |
   LDA #$13                                  ; $17ED7B |
-  STA $0969                                 ; $17ED7D |
+  STA !r_reg_tmw_mirror                     ; $17ED7D |
   RTS                                       ; $17ED80 |
 
   JSR CODE_17EC26                           ; $17ED81 |
@@ -12487,7 +12513,7 @@ CODE_17ED93:
 
   JSR CODE_17ECA1                           ; $17ED94 |
   LDA #$00                                  ; $17ED97 |
-  STA $0969                                 ; $17ED99 |
+  STA !r_reg_tmw_mirror                     ; $17ED99 |
   STZ $1118                                 ; $17ED9C |
   STZ $112D                                 ; $17ED9F |
   RTS                                       ; $17EDA2 |
@@ -12530,9 +12556,9 @@ CODE_17EDDF:
   BEQ CODE_17EE27                           ; $17EDE5 |
   LDA $112D                                 ; $17EDE7 |
   ASL A                                     ; $17EDEA |
-  CMP $6082                                 ; $17EDEB |
+  CMP !s_control_scheme                     ; $17EDEB |
   BEQ CODE_17EE27                           ; $17EDEE |
-  STA $6082                                 ; $17EDF0 |
+  STA !s_control_scheme                     ; $17EDF0 |
   JSR CODE_17E85D                           ; $17EDF3 |
   JSR CODE_17EB1F                           ; $17EDF6 |
   JSR CODE_17EB42                           ; $17EDF9 |
@@ -12548,7 +12574,7 @@ CODE_17EDDF:
   STA $7E55C0                               ; $17EE14 |
   SEP #$20                                  ; $17EE18 |
   LDA #$01                                  ; $17EE1A |
-  STA $0969                                 ; $17EE1C |
+  STA !r_reg_tmw_mirror                     ; $17EE1C |
   BRA CODE_17EE27                           ; $17EE1F |
 
 CODE_17EE21:
@@ -12818,7 +12844,7 @@ CODE_17F077:
   BRA CODE_17F0D9                           ; $17F0CF |
   JSR CODE_17CCBA                           ; $17F0D1 |
   LDA #$11                                  ; $17F0D4 |
-  STA $0969                                 ; $17F0D6 |
+  STA !r_reg_tmw_mirror                     ; $17F0D6 |
 
 CODE_17F0D9:
   STZ $1118                                 ; $17F0D9 |
@@ -13044,8 +13070,8 @@ CODE_17F250:
   STZ $1118                                 ; $17F269 |
   STZ $114E                                 ; $17F26C |
   LDA #$10                                  ; $17F26F |
-  STA $096B                                 ; $17F271 |
-  STZ $0969                                 ; $17F274 |
+  STA !r_reg_cgwsel_mirror                  ; $17F271 |
+  STZ !r_reg_tmw_mirror                     ; $17F274 |
   REP #$20                                  ; $17F277 |
   STZ $110C                                 ; $17F279 |
   LDA $1112                                 ; $17F27C |
@@ -13140,7 +13166,7 @@ CODE_17F2B0:
 
 CODE_17F346:
   REP #$10                                  ; $17F346 |
-  LDX $6092                                 ; $17F348 |
+  LDX !s_oam_next_free_slot_ptr             ; $17F348 |
   LDA $1109                                 ; $17F34B |
   AND #$00FF                                ; $17F34E |
   SEC                                       ; $17F351 |
@@ -13187,7 +13213,7 @@ CODE_17F346:
   TXA                                       ; $17F3B0 |
   CLC                                       ; $17F3B1 |
   ADC #$0020                                ; $17F3B2 |
-  STA $6092                                 ; $17F3B5 |
+  STA !s_oam_next_free_slot_ptr             ; $17F3B5 |
   SEP #$30                                  ; $17F3B8 |
   RTS                                       ; $17F3BA |
 
@@ -13207,12 +13233,15 @@ CODE_17F3C8:
   LDA $F3C9,x                               ; $17F3D6 |
   STA $03A7                                 ; $17F3D9 |
   LDA #$2D                                  ; $17F3DC |
-  STA $0118                                 ; $17F3DE |
+  STA !r_game_mode                          ; $17F3DE |
   LDA #$FF                                  ; $17F3E1 |
   STA $0374                                 ; $17F3E3 |
   RTS                                       ; $17F3E6 |
 
 ; pointers to level entrances
+; Maps World Map tiles to an index into map_level_entrances
+; This includes Bonus, score and controller tiles making each world 12 tiles
+level_entrance_indexes:
   dw $0000                                  ; $17F3E7 |
   dw $0004                                  ; $17F3E9 |
   dw $0008                                  ; $17F3EB |
@@ -13288,6 +13317,7 @@ CODE_17F3C8:
 ; byte 2 is X position
 ; byte 3 is Y position
 ; byte 4 is the map icon to unlock after completing the level
+map_level_entrances:
   db $00, $07, $77, $01                     ; $17F471 |
   db $01, $07, $7A, $02                     ; $17F475 |
   db $02, $03, $7A, $03                     ; $17F479 |
@@ -13346,6 +13376,7 @@ CODE_17F3C8:
   db $39, $08, $76, $00                     ; $17F54D |
 
 ; pointers to midway entrances
+level_midway_entrance_indexes:
   dw $0000                                  ; $17F551 |
   dw $0004                                  ; $17F553 |
   dw $000C                                  ; $17F555 |
@@ -13416,11 +13447,12 @@ CODE_17F3C8:
   dw $01D0                                  ; $17F5D7 |
   dw $01E0                                  ; $17F5D9 |
 
-; midway entances (4 bytes per entrance)
+; midway entrances (4 bytes per entrance)
 ; byte 1 is level number
 ; byte 2 is X position
 ; byte 3 is Y position
 ; byte 4 is the entrance type
+map_level_midway_entrances:
   db $00, $78, $76, $00                     ; $17F5DB |
   db $01, $82, $7B, $00                     ; $17F5DF |
   db $3B, $09, $49, $00                     ; $17F5E3 |
@@ -13545,7 +13577,11 @@ CODE_17F3C8:
   db $6C, $67, $4B, $00                     ; $17F7BF |
 
 ; level object and sprite data pointers (two pointers per level)
-  dl $1681C7, $168583                       ; $17F7C3 | 00
+level_object_pointers:
+  dl $1681C7                                ; $17F7C3 | 00 object data
+level_sprite_pointers:
+  dl $168583                                ; $17F7C6 | 00 sprite data
+
   dl $4CE0A2, $4CE976                       ; $17F7C9 | 01  $19E0A2, $19E976
   dl $168671, $1690B5                       ; $17F7CF | 02
   dl $148000, $14869D                       ; $17F7D5 | 03
@@ -13767,6 +13803,7 @@ CODE_17F3C8:
   dl $15FCEA, $15FFD5                       ; $17FCE5 | DB
   dl $15FBA2, $15FF7D                       ; $17FCEB | DC
   dl $15FCBE, $15FFD0                       ; $17FCF1 | DD
+
 
 ; freespace
   db $FF, $FF, $FF, $FF, $FF, $FF           ; $17FCF7 |
